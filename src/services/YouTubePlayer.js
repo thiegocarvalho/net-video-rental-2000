@@ -22,8 +22,11 @@ export function initYtPlayer() {
   if (typeof YT === 'undefined' || !YT.Player) return;
   if (!document.getElementById('yt-player')) return;
   window.ytPlayer = new YT.Player('yt-player', {
-    height: '100%',
-    width: '100%',
+    // Inteiros, do tamanho de #yt-container: '100%' vira atributo de dimensao invalido no HTML5
+    // (so aceita inteiro) e cada navegador resolve de um jeito. O CSS em #yt-container iframe
+    // ainda forca 100%/100%, mas o iframe ja nasce com a proporcao certa.
+    height: 510,
+    width: 640,
     videoId: '',
     playerVars: { autoplay: 1, mute: 1, controls: 0, disablekb: 1, modestbranding: 1, rel: 0, showinfo: 0, iv_load_policy: 3 },
     events: {

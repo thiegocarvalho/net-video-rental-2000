@@ -14,6 +14,12 @@ canvas{display:block}
    contra o viewport grande (barra de URL recolhida) enquanto o canvas, fixed, ficava preso ao
    viewport visual: o video descia a altura da barra e saia da TV. */
 #css-app{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+/* O iframe do YouTube: a API troca a div #yt-player por um <iframe> e o style inline dela se perde.
+   Sobram os atributos width/height="100%", que no HTML5 so aceitam inteiro - percentual e invalido e
+   cada navegador resolve de um jeito. No iOS o iframe ficava bem mais alto que os 510px do contentor
+   e o YouTube centraliza o video dentro dele, entao o topo do quadro caia na base do tubo, com preto
+   por cima. CSS vence atributo de apresentacao: aqui o iframe passa a preencher o contentor sempre. */
+#yt-container iframe{position:absolute;inset:0;width:100%!important;height:100%!important;border:0;display:block}
 /* tamanho fixo e explicito (CWV/CLS): o canvas WebGL entra depois do boot e nao pode deslocar o layout */
 #app{position:fixed;inset:0;width:100%;height:100%;overflow:hidden;z-index:1}  /* o canvas fica ACIMA da camada CSS3D (#css-app): o video aparece pelo buraco da tela da TV e objetos na frente o cobrem */
 /* #grade: color grade de cutscene. z-index 10: acima do canvas (#app 1) e do #crt (2), do #css-app/#arcade-layer (0);
@@ -240,6 +246,9 @@ body.touch #mb5{right:90px;bottom:4px}
 body.touch.watching #mAct{width:auto;height:auto;bottom:auto;top:calc(52px + var(--sat));right:calc(10px + var(--sar));
   display:flex;flex-direction:row;flex-wrap:wrap;justify-content:flex-end;gap:8px;max-width:calc(100vw - 20px)}
 body.touch.watching .mb{position:static;width:58px;height:58px}
+/* A 10px "PLAY/PAUSE" nao cabe nos 56px e quebrava no meio da palavra ("PLAY/PAU SE").
+   A 9px os cinco rotulos do videocassete cabem numa linha so. O alvo de toque segue 58px. */
+body.touch.watching .mb-lbl{font-size:9px;max-width:54px;line-height:1.05}
 body.touch.watching #mb1{width:58px;height:58px}
 /* textos do HUD acima do joystick e legiveis */
 body.touch #toast{left:calc(16px + var(--sal));bottom:calc(172px + var(--sab));max-width:min(62vw,420px)}
