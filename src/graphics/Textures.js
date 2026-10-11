@@ -60,7 +60,8 @@ export const TXT = {
   termCredits3: '• GATEWAY PC / TV / VCR / TAPE',
   termPrompt: t('scn.tex.termPrompt'),
   // Pôster soviético: estêncil de norma e carimbo. Não se traduzem (SAFE é o comando do terminal).
-  sovietSerial: 'CCCP · 1974 · ГОСТ 2000-XX',
+  sovietSerial: '№ 2000-XX · 1974',
+  sovietWords: 'КАРТОФЕЛЬ · ПЕЧЬ · ГРУЗОВИК',   // batata, forno, caminhao: ruido tipografico, nao e frase
   sovietStamp: 'SAFE'
 };
 
@@ -366,7 +367,7 @@ export function createRetroSharePoster(canvas, url, channelHandle, seed) {
 // Pôster brutalista soviético / construtivista russo: a pista do easter egg SAFE (AJUSTES_FINAIS.md §4.2).
 // Fica na parede do fundo ATRÁS do cartaz de indicação (Furnishings.js) e só aparece quando aquele cai.
 // Papel amarelado encardido (mofo, ferrugem, vincos, fibra), tinta vermelho escarlate desbotado e preto fuligem;
-// moldura industrial chanfrada, faixas diagonais de advertência, estrela construtivista angular no topo e
+// moldura industrial chanfrada, faixas diagonais de advertência, emblema geométrico angular no topo e
 // tipografia condensada em CAIXA ALTA com faixas de destaque invertidas. A frase vem do i18n (quem chama passa).
 // Desenhado num espaço lógico de 600x900 e escalado para o canvas recebido (512x768 por padrão).
 export function createSovietCluePoster(canvas, phrase, seed) {
@@ -415,39 +416,28 @@ export function createSovietCluePoster(canvas, phrase, seed) {
     x.beginPath(); x.moveTo(0, 0); x.lineTo(34, 0); x.lineTo(0, 34); x.closePath(); x.fill(); x.restore();
   });
 
-  // ---- estrela construtivista angular no topo ----
+  // ---- emblema geometrico no topo ----
+  // Sem estrela nem sigla de estado: so uma placa com barras decrescentes, que le como marca
+  // industrial generica. O cirilico abaixo e ruido tipografico (palavras soltas, sem sentido junto).
   var SX = LW / 2, SY = 196;
-  x.save(); x.translate(SX, SY);
-  x.fillStyle = INK;                                          // sombra dura deslocada
-  x.beginPath();
-  for (i = 0; i < 10; i++) {
-    var a0 = -Math.PI / 2 + i * Math.PI / 5, rr0 = (i % 2 ? 46 : 112);
-    var px0 = Math.cos(a0) * rr0 + 9, py0 = Math.sin(a0) * rr0 + 9;
-    if (i) x.lineTo(px0, py0); else x.moveTo(px0, py0);
-  }
-  x.closePath(); x.fill();
-  x.fillStyle = RED;                                          // estrela de 5 pontas, geometria dura
-  x.beginPath();
-  for (i = 0; i < 10; i++) {
-    var a1 = -Math.PI / 2 + i * Math.PI / 5, rr1 = (i % 2 ? 46 : 112);
-    var px1 = Math.cos(a1) * rr1, py1 = Math.sin(a1) * rr1;
-    if (i) x.lineTo(px1, py1); else x.moveTo(px1, py1);
-  }
-  x.closePath(); x.fill();
-  x.fillStyle = 'rgba(24,22,20,.55)';                         // cunhas escuras: faceta construtivista
-  for (i = 0; i < 5; i++) {
-    var a2 = -Math.PI / 2 + i * 2 * Math.PI / 5;
-    x.beginPath(); x.moveTo(0, 0);
-    x.lineTo(Math.cos(a2) * 112, Math.sin(a2) * 112);
-    x.lineTo(Math.cos(a2 + Math.PI / 5) * 46, Math.sin(a2 + Math.PI / 5) * 46);
-    x.closePath(); x.fill();
-  }
-  x.restore();
-  // torre angular atrás da estrela (duas barras grossas inclinadas)
-  x.save(); x.translate(SX, SY + 10); x.globalAlpha = 0.5; x.fillStyle = INK;
+  x.save(); x.translate(SX, SY + 10); x.globalAlpha = 0.5; x.fillStyle = INK;   // barras angulares, atras
   x.rotate(-0.22); x.fillRect(-150, -6, 300, 14);
   x.rotate(0.44); x.fillRect(-150, -6, 300, 14);
   x.restore();
+  x.save(); x.translate(SX, SY);
+  x.fillStyle = INK; x.fillRect(-143, -57, 304, 132);         // sombra dura deslocada
+  x.fillStyle = RED; x.fillRect(-152, -66, 304, 132);         // placa
+  x.fillStyle = CREAM;                                        // tres barras grossas decrescentes
+  x.fillRect(-128, -42, 256, 20);
+  x.fillRect(-128, -10, 196, 20);
+  x.fillRect(-128, 22, 136, 20);
+  x.fillStyle = 'rgba(24,22,20,.5)';                          // cunha diagonal: faceta construtivista
+  x.beginPath(); x.moveTo(152, -66); x.lineTo(152, 66); x.lineTo(66, 66); x.closePath(); x.fill();
+  x.restore();
+  x.textAlign = 'center';
+  x.font = COND('700')(25);
+  x.fillStyle = 'rgba(24,22,20,.62)';
+  x.fillText(TXT.sovietWords, SX, SY + 112);
 
   // ---- faixa diagonal de advertência ----
   function hazard(y, h) {
