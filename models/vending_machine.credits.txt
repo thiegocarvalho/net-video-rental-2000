@@ -1,0 +1,5 @@
+Title: Vending Machine
+Creator: dook
+Source: https://poly.pizza/m/yNG4vqWVq0
+License: Creative Commons Attribution 3.0 (CC-BY 3.0)
+

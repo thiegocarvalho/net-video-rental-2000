@@ -1,0 +1,32 @@
+# Dependências e builds (o projeto não tem build step; isto é só blindagem)
+node_modules/
+dist/
+build/
+
+# Segredos, chaves de API e variáveis de ambiente
+.env
+.env.*
+*.pem
+*.key
+*.cert
+
+# Scripts de teste/benchmark locais (Puppeteer, scrapers) e patches de uma vez
+sch_t2.cjs
+puppeteer-profile/
+test-results/
+coverage/
+patch_*.js
+
+# Diretórios de trabalho temporário e rascunhos de IA
+scratch/
+graphify-out/
+.claude/
+.gemini/
+
+# Sistema operacional e editores
+.DS_Store
+Thumbs.db
+*.swp
+*.log
+.vscode/
+.idea/

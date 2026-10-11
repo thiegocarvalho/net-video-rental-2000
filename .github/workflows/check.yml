@@ -1,0 +1,22 @@
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Sintaxe dos módulos
+        run: |
+          find src tools -name '*.js' -o -name '*.mjs' | while read -r f; do
+            node --check --input-type=module < "$f" || { echo "Erro em $f"; exit 1; }
+          done
+      - name: Dicionários i18n
+        run: node tools/check-i18n.mjs

@@ -1,0 +1,5 @@
+Title: Coin
+Creator: Quaternius
+Source: https://poly.pizza/m/QHZtj94fvh
+License: Public Domain (CC0 1.0)
+Pack: Quaternius (Poly Pizza)

@@ -1,0 +1,9 @@
+* text=auto eol=lf
+
+*.glb binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+libs/*.min.js linguist-vendored

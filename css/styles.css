@@ -1,0 +1,733 @@
+/* Survival-horror HUD: minimal, contextual, desaturated, thin lines, one amber accent */
+:root{--bg:rgba(6,6,5,.9);--bg2:rgba(10,9,8,.97);--txt:#f0ecdf;--dim:#bdb8a8;--line:rgba(240,236,223,.38);
+  --line2:rgba(217,212,199,.55);--gold:#d4ad4a;--red:#a3322b;
+  --serif:"Barlow","Segoe UI",Arial,sans-serif;--mono:"Barlow","Segoe UI",Arial,sans-serif;
+  --neon2:#b8963e;--font:var(--mono);
+  --gold-hi:#f0d27a;--gold-lo:#7a5f1c;--gold-glow:rgba(212,173,74,.16);--focus:#ffd45e;--ink:#050504;
+  --ease:cubic-bezier(.2,.7,.2,1);--panel-shadow:0 8px 32px rgba(0,0,0,.65)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{-webkit-font-smoothing:antialiased;margin:0;height:100%;overflow:hidden;background:#050504;font-family:var(--mono);color:var(--txt)}
+canvas{display:block}
+#arcade-layer{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+#css-app{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0}
+/* tamanho fixo e explicito (CWV/CLS): o canvas WebGL entra depois do boot e nao pode deslocar o layout */
+#app{position:fixed;inset:0;width:100%;height:100%;overflow:hidden;z-index:1}  /* o canvas fica ACIMA da camada CSS3D (#css-app): o video aparece pelo buraco da tela da TV e objetos na frente o cobrem */
+/* #grade: color grade de cutscene. z-index 10: acima do canvas (#app 1) e do #crt (2), do #css-app/#arcade-layer (0);
+   abaixo do HUD (30), #deck/#fs-btn (40-45), modais (58+), #fade (98/999) e #final-screen (1000).
+   Controlado inline por JS: --g-amt (0..1), --g-blur (px), --g-tint. Sem .on: display:none, custo zero. */
+#grade{display:none;position:fixed;inset:0;z-index:10;pointer-events:none;opacity:0;transition:opacity .25s;
+  --g-amt:0;--g-blur:0px;--g-sep:0;--g-tint:#d8a227;
+  background:radial-gradient(ellipse at center,transparent 45%,rgba(0,0,0,calc(var(--g-amt) * .85)) 100%)}
+/* A cor vem do sepia/saturate do backdrop-filter, que mantem a luminancia da cena: uma camada solida por cima
+   com 30% ja afogaria a noite inteira em mostarda. O ::before e so um verniz quente leve. */
+#grade::before{content:"";position:absolute;inset:0;background:var(--g-tint);opacity:calc(var(--g-amt) * .3)}
+#grade.on{display:block;opacity:1;
+  -webkit-backdrop-filter:blur(var(--g-blur,0px)) sepia(var(--g-sep,0)) saturate(calc(1 + var(--g-sep,0) * .7));
+  backdrop-filter:blur(var(--g-blur,0px)) sepia(var(--g-sep,0)) saturate(calc(1 + var(--g-sep,0) * .7))}
+/* screen-edge vignette + grain (cheap, static) */
+body::after{content:"";position:fixed;inset:0;z-index:31;pointer-events:none;
+  background:radial-gradient(ellipse at center,transparent 58%,rgba(0,0,0,.55) 100%);
+  display:none}
+body.playing::after{display:block}
+
+/* debug-only */
+#diag{display:none;position:fixed;left:10px;top:10px;z-index:99;max-width:min(90vw,560px);
+  padding:8px 10px;font:13px/1.5 var(--mono);white-space:pre-wrap;color:var(--txt);
+  background:var(--bg2);border:1px solid var(--line)}
+body.debug #diag,#diag.bad{display:block}
+#diag.bad{border-color:var(--red);color:#e8b9b4}
+#diag.gone{display:none!important}
+#fps{display:none;position:fixed;left:10px;bottom:10px;z-index:99;pointer-events:none;
+  color:var(--gold);font:13px/1.4 var(--mono)}
+body.debug #fps{display:block}
+
+/* TV overlay */
+#crt{position:fixed;left:0;top:0;width:640px;height:480px;transform-origin:0 0;
+     pointer-events:none;opacity:0;z-index:20}
+#crt.on{opacity:1}
+#crtInner{position:absolute;inset:0;overflow:hidden;background:#000}
+#fx{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated}
+#scan{position:absolute;inset:0;mix-blend-mode:multiply;
+  background:repeating-linear-gradient(to bottom,rgba(0,0,0,.4) 0 2px,rgba(255,255,255,0) 2px 4px)}
+#bloom{position:absolute;inset:0;
+  background:radial-gradient(120% 100% at 50% 45%,rgba(255,255,255,.10),rgba(0,0,0,.5) 78%,rgba(0,0,0,.9))}
+/* VCR on-screen display: small, VCR-style */
+#osd{position:absolute;inset:0;padding:28px 34px;font:700 22px/1.1 var(--font);
+     color:#fff;text-shadow:2px 2px 0 #000;letter-spacing:2px;text-transform:uppercase}
+#osdTop{display:flex;justify-content:space-between}
+#osdMode{color:#fff}
+#osdCounter{color:#6dff6d}
+#osdMsg{position:absolute;left:34px;bottom:30px;font-size:18px;color:#6dff6d;max-width:80%}
+.blink{animation:bl 1s steps(1) infinite}
+@keyframes bl{50%{opacity:0}}
+#yt-mute-indicator{animation:pulseMute 2s steps(2) infinite}
+@keyframes pulseMute{0%,100%{border-color:#00ff66}50%{border-color:#33ff88}}
+
+#yt-container{overflow:hidden!important;border-radius:24px!important;}
+#yt-player{position:absolute!important;inset:0!important;overflow:hidden!important;}
+#yt-player iframe{position:absolute!important;top:50%!important;left:50%!important;width:100%!important;height:100%!important;transform:translate(-50%,-50%) scale(1.36)!important;transform-origin:center center!important;border:none!important;}
+
+/* HUD */
+#hud{position:fixed;inset:0;width:100%;height:100%;overflow:hidden;z-index:30;pointer-events:none;display:none}
+#hud.on{display:block}
+#cross{position:absolute;left:50%;top:50%;width:3px;height:3px;margin:-1.5px 0 0 -1.5px;border-radius:50%;
+  background:rgba(217,212,199,.75);box-shadow:0 0 0 1px rgba(0,0,0,.6);transition:transform .18s,background .18s,opacity .18s}
+#cross.hot{transform:scale(2.4);background:var(--gold)}
+/* retícula da espingarda (entities/Shotgun.js): anel de dispersão de chumbo + 4 marcas ortogonais,
+   no espírito dos shooters dos anos 90. A classe .shotgun é ligada/desligada por main.js com S.heldGun. */
+#cross.shotgun{background:rgba(217,212,199,.55)}
+#cross.shotgun.hot{transform:none;background:var(--gold)}      /* o anel nao escala: trocaria de tamanho a cada alvo */
+#cross.shotgun::before{content:"";position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;
+  border:1px solid rgba(217,212,199,.40);border-radius:50%;
+  box-shadow:0 0 0 1px rgba(0,0,0,.45),inset 0 0 0 1px rgba(0,0,0,.30)}
+#cross.shotgun::after{content:"";position:absolute;left:50%;top:50%;width:64px;height:64px;margin:-32px 0 0 -32px;
+  opacity:.8;filter:drop-shadow(0 0 1px rgba(0,0,0,.9));
+  background:
+    linear-gradient(var(--gold),var(--gold)) no-repeat 50% 0/1px 9px,
+    linear-gradient(var(--gold),var(--gold)) no-repeat 50% 100%/1px 9px,
+    linear-gradient(var(--gold),var(--gold)) no-repeat 0 50%/9px 1px,
+    linear-gradient(var(--gold),var(--gold)) no-repeat 100% 50%/9px 1px}
+#cross.shotgun.hot::before{border-color:rgba(212,173,74,.75)}
+
+/* interaction prompt */
+#look{position:absolute;left:50%;bottom:17vh;transform:translateX(-50%);display:flex;align-items:center;gap:10px;
+  padding:6px 22px 6px 12px;font:15px/1.35 var(--serif);letter-spacing:.02em;color:var(--txt);
+  max-width:80vw;text-align:left;opacity:0;visibility:hidden;transition:opacity .2s,visibility .2s;
+  background:linear-gradient(90deg,transparent,rgba(0,0,0,.6) 18%,rgba(0,0,0,.6) 82%,transparent);
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+#look::before{content:"E";flex:none;width:22px;height:22px;display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--line2);font:14px/1 var(--mono);color:var(--txt)}
+#look.on{opacity:1;visibility:visible}
+#look b{font-weight:400;color:var(--txt)}
+#look span{color:var(--gold)!important}
+
+/* held item */
+#hand{position:absolute;left:18px;top:18px;max-width:46vw;padding:6px 14px 6px 10px;
+  font:14px/1.4 var(--serif);letter-spacing:.02em;color:var(--dim);text-transform:uppercase;
+  background:linear-gradient(90deg,rgba(0,0,0,.6),transparent);border-left:2px solid var(--gold);
+  display:block;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s}
+#hand.on{opacity:1;visibility:visible;animation:handDim 1s 5s forwards}
+#hand b{color:var(--txt)!important;font-weight:400;text-transform:none;font-size:14px}
+@keyframes handDim{to{opacity:.4}}
+
+/* pickup-style notices, bottom-left, stacked */
+#toast{position:absolute;left:18px;bottom:18px;display:flex;flex-direction:column;gap:4px;align-items:flex-start;max-width:70vw}
+#toast .t{padding:5px 14px 5px 10px;font:14px/1.3 var(--serif);letter-spacing:.02em;color:var(--txt);
+  background:linear-gradient(90deg,rgba(0,0,0,.7),transparent);border-left:2px solid var(--gold);
+  animation:toastLife 3.2s forwards}
+@keyframes toastLife{0%{opacity:0;transform:translateX(-8px)}8%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0}}
+
+/* popup de conquista: pilula escura, acento dourado, expande da esquerda */
+#ach-popup{position:absolute;left:50%;bottom:64px;transform:translateX(-50%);display:flex;align-items:center;gap:12px;
+  height:54px;padding:0 26px 0 6px;border-radius:27px;background:var(--bg);border:1px solid var(--line);border-left:2px solid var(--gold);
+  clip-path:inset(0 100% 0 0 round 27px);opacity:0;visibility:hidden;pointer-events:none}
+#ach-popup.on{visibility:visible;animation:achLife 4s forwards}
+@keyframes achLife{0%{opacity:0;clip-path:inset(0 100% 0 0 round 27px)}6%{opacity:1}16%,88%{opacity:1;clip-path:inset(0 0 0 0 round 27px)}100%{opacity:0;clip-path:inset(0 0 0 0 round 27px)}}
+#ach-popup .ach-icon{flex:none;width:42px;height:42px;border-radius:50%;background:radial-gradient(circle at 35% 30%,var(--gold-hi),var(--gold) 55%,var(--gold-lo));display:flex;align-items:center;justify-content:center}
+#ach-popup .ach-icon svg{width:24px;height:24px;fill:#1a1405}
+#ach-popup .ach-label{font:11px/1.2 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--gold)}
+#ach-popup .ach-name{font:16px/1.3 var(--serif);color:var(--txt);white-space:nowrap}
+/* aba CONQUISTAS do terminal */
+.ach-head{color:#ffd700;margin-bottom:8px;font-weight:bold}
+.ach-row{display:flex;align-items:center;gap:10px;padding:5px 6px;border-bottom:1px solid #0d3a1c;color:#18803c}
+.ach-row.got{color:#00ff66}
+.ach-ic{flex:none;width:22px;height:22px;border-radius:50%;background:#031308;border:1px solid #14592b;display:flex;align-items:center;justify-content:center}
+.ach-row.got .ach-ic{background:#0a381a;border-color:#00ff66}
+.ach-ic svg{width:13px;height:13px;fill:currentColor}
+.ach-rn{flex:1;font-family:var(--mono);white-space:pre}
+.ach-rt{flex:none;font-family:var(--mono);color:#ffd700}
+
+/* aviso de controles: painel escuro do padrao Resident Evil, acento dourado em cima e embaixo */
+#hint{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);z-index:40;padding:8px 20px;
+  background:rgba(6,8,12,.88);border:1px solid var(--line);border-top:1px solid var(--gold);border-bottom:1px solid var(--gold);
+  box-shadow:0 4px 16px rgba(0,0,0,.75);font:12px/1.4 var(--mono);letter-spacing:.06em;color:var(--txt);
+  text-align:center;max-width:94vw;text-transform:uppercase;pointer-events:none;
+  opacity:0;visibility:hidden;transition:opacity .8s,visibility .8s}
+#hint.on{opacity:1;visibility:visible}
+body.watching #hint{display:none}
+
+/* small corner buttons */
+#snd{position:fixed;top:14px;z-index:45;display:none;padding:4px 10px;background:rgba(0,0,0,.35);
+  border:1px solid var(--line);color:var(--dim);font:12px/1 var(--mono);letter-spacing:.04em;text-transform:uppercase;
+  cursor:pointer;opacity:.55;transition:opacity .2s,border-color .2s,color .2s}
+#snd{right:14px}
+body.playing #snd{display:block}
+#snd:hover{opacity:1;border-color:var(--gold);color:var(--txt)}
+
+/* VCR deck: inventory-slot panel */
+#deck{display:none;position:fixed;left:50%;bottom:14px;transform:translate(-50%,20px);opacity:0;z-index:40;
+  width:min(560px,96vw);padding:12px 14px 8px;color:var(--txt);
+  background:
+    repeating-linear-gradient(0deg,transparent 0 23px,rgba(217,212,199,.05) 23px 24px),
+    repeating-linear-gradient(90deg,transparent 0 23px,rgba(217,212,199,.05) 23px 24px),
+    var(--bg2);
+  border:1px solid var(--line2);outline:1px solid var(--line);outline-offset:3px;
+  transition:transform .3s,opacity .3s}
+#deck.on{transform:translate(-50%,0);opacity:1}
+#deckTop{display:flex;align-items:baseline;gap:10px;padding:0 0 8px;border-bottom:1px solid var(--line);margin-bottom:10px}
+#deckName{font:15px/1 var(--serif);letter-spacing:.02em;color:var(--txt)}
+#deckLcd{margin-left:auto;color:var(--gold);padding:0 2px;font:15px/1 var(--mono);letter-spacing:.04em}
+#deckDesc{font:13px/1.4 var(--mono);color:var(--dim);margin:-4px 0 10px}
+#btns{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.b{appearance:none;border:1px solid var(--line);background:rgba(0,0,0,.35);color:var(--txt);padding:9px 2px 7px;
+   font:11px/1.1 var(--mono);letter-spacing:.02em;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;
+   transition:border-color .15s,background .15s}
+.b span{font-size:14px;line-height:1}
+.b:hover{border-color:var(--line2)}
+.b:active,.b.held{border-color:var(--gold);background:rgba(184,150,62,.16)}
+.b.rec{color:#c98a84}
+#trk{display:flex;align-items:center;gap:8px;margin-top:10px;font:12px/1 var(--mono);color:var(--dim);letter-spacing:.04em}
+#trkBar{flex:1;height:1px;background:var(--line2);position:relative}
+#trkDot{position:absolute;top:-5px;left:50%;width:6px;height:11px;margin-left:-3px;background:var(--gold)}
+#deckKeys{margin-top:10px;padding-top:6px;border-top:1px solid var(--line);font:12px/1.3 var(--mono);
+  letter-spacing:.04em;color:var(--dim);text-transform:uppercase}
+
+/* touch + key actions */
+#stick{position:fixed;left:18px;bottom:24px;width:128px;height:128px;z-index:35;border-radius:50%;
+  background:rgba(0,0,0,.18);border:1px solid var(--line);display:none}
+#knob{position:absolute;left:44px;top:44px;width:38px;height:38px;border-radius:50%;
+  border:1px solid var(--line2);background:rgba(217,212,199,.14)}
+#mAct{position:fixed;right:16px;bottom:16px;z-index:35;display:none;flex-direction:column;gap:5px;align-items:flex-end;pointer-events:none}
+body.playing #mAct{display:flex}
+.mb{background:linear-gradient(270deg,rgba(0,0,0,.55),transparent);border:0;border-right:1px solid var(--line);
+  padding:4px 10px 4px 24px;color:var(--dim);font:13px/1.2 var(--mono);letter-spacing:.04em;text-transform:uppercase;
+  display:flex;align-items:center;gap:8px;cursor:pointer;opacity:.35;transition:opacity .2s,color .2s;
+  pointer-events:auto;width:auto;height:auto}
+.mb.on{opacity:1;color:var(--txt)}
+.mb-key{color:var(--gold)}
+.mb-lbl{min-width:96px;text-align:left}
+
+@media (max-height:420px){#look{bottom:8vh}}
+
+/* ===== Touch (body.touch = pointer:coarse; ui/TouchControls.js). Nada daqui vale no desktop. ===== */
+:root{--kb:0px;--sal:env(safe-area-inset-left,0px);--sar:env(safe-area-inset-right,0px);
+  --sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px)}
+/* sem zoom por pinca, pull-to-refresh, rolagem da pagina, selecao de texto ou menu de toque longo durante o jogo */
+body.touch{overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+body.touch input,body.touch textarea{-webkit-user-select:text;user-select:text}
+body.touch #app,body.touch #app canvas,body.touch #stick,body.touch #mAct,body.touch .mb{touch-action:none}
+/* joystick: canto inferior esquerdo, fora da area segura (notch/barra de gestos) */
+body.touch.playing #stick{display:block}
+body.touch #stick{left:calc(18px + var(--sal));bottom:calc(22px + var(--sab));width:132px;height:132px;background:rgba(0,0,0,.22)}
+body.touch #knob{left:46px;top:46px;width:40px;height:40px;transition:transform .06s linear}
+body.touch.watching #stick,body.touch.terminal-open #stick,body.touch.playing-arcade #stick,body.touch.playing-gta #stick,
+body.touch.final-open #stick{display:none}
+/* botoes de acao: aglomerado para o polegar direito; E (principal) maior, no canto */
+body.touch #mAct{display:none;right:calc(14px + var(--sar));bottom:calc(20px + var(--sab));width:236px;height:236px;gap:0}
+body.touch.playing #mAct{display:block}
+body.touch .mb{position:absolute;width:60px;height:60px;padding:0;justify-content:center;border:1px solid var(--line2);
+  border-radius:50%;background:rgba(0,0,0,.38);opacity:.5}
+body.touch .mb.on{opacity:.92;color:var(--txt)}
+body.touch .mb.active{background:rgba(184,150,62,.35);border-color:var(--gold)}
+body.touch .mb-key{display:none}
+body.touch .mb-lbl{min-width:auto;max-width:56px;text-align:center;font-size:10px;line-height:1.1;letter-spacing:.02em;overflow-wrap:anywhere}
+body.touch #mb1{right:0;bottom:0;width:78px;height:78px;border-color:var(--gold)}
+body.touch #mb1 .mb-lbl{max-width:72px;font-size:11px}
+body.touch #mb2{right:90px;bottom:4px}
+body.touch #mb4{right:9px;bottom:90px}
+body.touch #mb3{right:80px;bottom:80px;width:54px;height:54px}
+body.touch #mb7{right:4px;bottom:162px;width:70px;height:70px;border-color:var(--red)}
+body.touch #mb6{right:162px;bottom:10px;width:50px;height:50px}
+/* #mb6 ([C] CLIENTE) e de laboratorio: nasce com style="display:none" inline no index.html, para o jogador
+   de producao nunca o ver nem poder tocar. Com ?debug o body ganha .debug e ele volta (!important vence o inline). */
+body.debug #mb6{display:flex!important}
+body.touch #mb5{right:90px;bottom:4px}
+/* assistindo TV: controle remoto em linha no topo, alvos de 56px */
+body.touch.watching #mAct{width:auto;height:auto;bottom:auto;top:calc(52px + var(--sat));right:calc(10px + var(--sar));
+  display:flex;flex-direction:row;flex-wrap:wrap;justify-content:flex-end;gap:8px;max-width:calc(100vw - 20px)}
+body.touch.watching .mb{position:static;width:58px;height:58px}
+body.touch.watching #mb1{width:58px;height:58px}
+/* textos do HUD acima do joystick e legiveis */
+body.touch #toast{left:calc(16px + var(--sal));bottom:calc(172px + var(--sab));max-width:min(62vw,420px)}
+body.touch #toast .t{font-size:15px}
+body.touch #hint{bottom:auto;top:calc(56px + var(--sat));font-size:12px}
+body.touch #look{bottom:calc(270px + var(--sab));max-width:86vw}
+body.touch #look::before{content:"";width:16px;height:16px;border-radius:50%;border-color:var(--gold)}
+body.touch #hand,body.touch #coin-counter,body.touch #shell-counter{left:calc(14px + var(--sal))}
+body.touch #hand{top:calc(14px + var(--sat))}
+/* alvos de toque minimos (WCAG 2.5.5 / Apple HIG: 44x44) */
+body.touch #snd,#fs-btn{min-height:44px;min-width:44px;padding:0 12px;font-size:12px}
+body.touch #snd{top:calc(10px + var(--sat));right:calc(10px + var(--sar));opacity:.75}
+#fs-btn{display:none;position:fixed;z-index:45;top:calc(10px + var(--sat));right:calc(142px + var(--sar));background:rgba(0,0,0,.35);
+  border:1px solid var(--line);color:var(--dim);font-family:var(--mono);letter-spacing:.04em;text-transform:uppercase;opacity:.75}
+body.touch.playing #fs-btn{display:block}
+body.touch.final-open #fs-btn,body.touch.terminal-open #fs-btn{display:none}
+body.touch #ach-popup{bottom:auto;top:calc(110px + var(--sat));max-width:94vw}
+body.touch #ach-popup .ach-name{white-space:normal}
+body.touch .game-help{bottom:auto;top:calc(56px + var(--sat));left:calc(10px + var(--sal))}
+body.touch #gta-exit{top:calc(56px + var(--sat));min-height:44px}
+body.touch #deck{bottom:0;padding:8px 8px calc(6px + var(--sab));outline:0}
+body.touch #deckKeys,body.touch #deckDesc{display:none}
+body.touch .b{padding:12px 2px 10px;min-height:44px}
+/* paisagem de celular (pouca altura): HUD mais compacto */
+@media (max-height:500px){
+  body.touch #stick{width:116px;height:116px;bottom:calc(14px + var(--sab))}
+  body.touch #knob{left:38px;top:38px}
+  body.touch #mAct{bottom:calc(12px + var(--sab))}
+  /* a esquerda, nao no centro: a faixa central e do #hint e dos botoes da TV */
+  body.touch #toast{bottom:auto;top:calc(56px + var(--sat));left:calc(16px + var(--sal));transform:none;
+    align-items:flex-start;max-width:min(52vw,360px)}
+  body.touch #look{bottom:calc(16px + var(--sab))}
+  body.touch #hint{top:calc(10px + var(--sat))}
+  body.touch #ach-popup{top:calc(60px + var(--sat))}
+  body.touch.watching #mAct{top:calc(8px + var(--sat));right:calc(130px + var(--sar));max-width:calc(100vw - 150px)}
+  body.touch #deck{width:min(560px,70vw)}
+  body.touch .game-help{transform:scale(.8);transform-origin:0 0}
+}
+/* form inicial: sobe acima do teclado virtual; respeita o notch */
+body.touch #boot{padding:20px calc(16px + var(--sar)) calc(7vh + var(--kb) + var(--sab)) calc(16px + var(--sal))}
+body.touch #btGo{min-height:48px}
+body.touch.kb-open #boot{align-items:flex-end;padding-bottom:calc(var(--kb) + 8px)}
+
+
+/* ===== modals: one dark panel language (inline styles overridden) ===== */
+#terminal-modal,#share-modal,#door-modal,#arcade-modal,#gta-modal{
+  backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:rgba(0,0,0,.82)!important;font-family:var(--mono)!important}
+#bell-counter{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:var(--bg2)!important;
+  border-radius:0!important;font-family:var(--serif)!important}
+#terminal-modal *,#share-modal *,#door-modal *,#arcade-modal *,#gta-modal *{
+  border-radius:0!important;text-shadow:none!important;box-shadow:none!important;transition:none!important;
+  color:var(--txt)!important;border-color:var(--line)!important;font-family:var(--mono)!important}
+#term-card,#door-card,#arcade-cabinet-frame,#gta-cabinet-frame,#share-modal>div{
+  border:1px solid var(--line2)!important;outline:1px solid var(--line);outline-offset:3px}
+#terminal-modal [style*="background"],#share-modal [style*="background"],#door-modal [style*="background"],
+#arcade-modal [style*="background"],#gta-modal [style*="background"]{background:transparent!important}
+#term-card[style],#door-card[style],#arcade-cabinet-frame[style],#gta-cabinet-frame[style],#share-modal>div[style]{background:var(--bg2)!important}
+#terminal-modal [style*="repeating-linear-gradient"],#door-modal [style*="repeating-linear-gradient"],
+#arcade-modal [style*="repeating-linear-gradient"],#gta-modal [style*="repeating-linear-gradient"]{background:none!important}
+#arcade-modal #arcade-iframe,#gta-modal #gta-iframe{background:#000!important}
+#terminal-modal [style*="border-left:4px"]{border-left:2px solid var(--gold)!important}
+#terminal-modal button,#share-modal button,#door-modal button,#arcade-modal button,#gta-modal button{
+  background:rgba(0,0,0,.35)!important;border:1px solid var(--line2)!important;cursor:pointer;
+  letter-spacing:.02em;text-transform:uppercase;font-size:11px!important}
+#terminal-modal button:hover,#share-modal button:hover,#door-modal button:hover,#arcade-modal button:hover,#gta-modal button:hover{
+  border-color:var(--gold)!important}
+#terminal-modal input,#share-modal input{background:rgba(0,0,0,.5)!important;border:1px solid var(--line)!important}
+#terminal-modal input:focus,#share-modal input:focus{border-color:var(--gold)!important}
+#terminal-modal b,#share-modal b,#door-modal b{font-weight:400}
+#share-channel-name,#term-handle,#term-count{color:var(--gold)!important}
+#door-modal #door-btn-leave{border-color:var(--red)!important}
+#share-modal #share-modal-qr{background:#d9d4c7!important}
+#share-modal-qr img,#share-modal-qr canvas{image-rendering:pixelated}
+#terminal-modal .win95-titlebar,#door-modal .win95-titlebar{background:transparent!important;font-family:var(--serif)!important;letter-spacing:.02em}
+
+/* ===== boot card ===== */
+#boot{position:fixed;inset:0;z-index:60;display:flex;align-items:flex-end;justify-content:center;padding:20px 20px 7vh;pointer-events:none}
+#card{width:min(480px,100%);color:var(--txt);pointer-events:auto;font-family:var(--mono);padding:28px 26px 24px;text-align:center;
+  background:radial-gradient(ellipse at center,rgba(0,0,0,.88) 0%,rgba(0,0,0,.8) 65%,rgba(0,0,0,0) 100%)}
+#card h2{margin:0 0 4px;font:26px/1.2 var(--serif);letter-spacing:.02em;color:var(--txt);font-weight:400}
+#card p{margin:0 0 12px;font:16px/1.4 var(--mono);color:var(--dim)}
+#feed{width:100%;height:58px;resize:none;text-align:left}
+#feed{background:rgba(0,0,0,.5);color:var(--txt);border:1px solid var(--line);
+  padding:8px 10px;font:16px var(--mono);width:100%;border-radius:0}
+#feed:focus{outline:none;border-color:var(--gold)}
+#btGo{width:100%;margin-top:12px;padding:9px;cursor:pointer;background:transparent;color:var(--txt);
+  border:1px solid var(--line2);font:15px var(--serif);letter-spacing:.04em;text-transform:uppercase;border-radius:0;
+  transition:border-color .15s,background .15s}
+#btGo:hover:not(:disabled){border-color:var(--gold);background:rgba(184,150,62,.12)}
+#btGo:disabled{color:var(--dim);cursor:wait}
+#status{margin-top:12px;font:14px var(--mono);color:var(--gold);min-height:16px}
+
+#fade{position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;background:#000;z-index:98;opacity:0;pointer-events:none;transition:opacity .55s}
+
+/* legibility of in-game HUD text over the 3D scene */
+#look,#hand,#toast .t,#hint,#deck,#mAct,#fps{text-shadow:1px 1px 0 #000,-1px 1px 0 #000,1px -1px 0 #000,-1px -1px 0 #000}
+
+/* Cartao de ajuda do fliperama (so enquanto sentado nele): painel de controle estilo Neo Geo */
+.game-help{position:fixed;left:16px;bottom:16px;z-index:44;display:none;width:min(372px,78vw);padding:10px 12px;
+  background:var(--bg);border:1px solid var(--line);border-left:3px solid var(--gold);color:var(--txt);font:14px/1.3 var(--mono);pointer-events:none}
+body.playing-arcade #arcade-help,body.playing-gta #gta-help{display:block}
+.game-help .ah-title{font-weight:700;color:var(--gold);letter-spacing:.04em;margin-bottom:8px}
+.game-help .kc{display:inline-block;min-width:22px;padding:1px 6px;border:1px solid var(--line2);border-bottom-width:3px;border-radius:3px;
+  background:rgba(255,255,255,.08);color:var(--txt);font-weight:700;font-size:12px;text-align:center;line-height:1.25}
+.game-help .ah-panel{display:flex;gap:14px;align-items:flex-end;padding:8px 10px;background:rgba(0,0,0,.35);border:1px solid var(--line);border-radius:4px}
+.game-help .ah-stick{position:relative;width:96px;text-align:center}
+.game-help .ah-ball{width:26px;height:26px;margin:0 auto 4px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ff8a7a,#b01c14 70%);box-shadow:0 2px 0 #4a0a06}
+.game-help .ah-dpad{display:grid;grid-template-columns:repeat(3,26px);grid-template-rows:repeat(2,22px);gap:3px;justify-content:center}
+.game-help .k-up{grid-column:2;grid-row:1}.game-help .k-left{grid-column:1;grid-row:2}.game-help .k-down{grid-column:2;grid-row:2}.game-help .k-right{grid-column:3;grid-row:2}
+.game-help .ah-dpad .kc{min-width:0;padding:0;line-height:20px}
+.game-help .ah-cap{margin-top:4px;color:var(--dim);font-size:11px}
+.game-help .ah-btns{display:flex;gap:7px;align-items:flex-end;flex:1;justify-content:space-between}
+.game-help .ah-btn{display:flex;flex-direction:column;align-items:center;gap:3px;width:50px}
+.game-help .ah-btn i{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;font-style:normal;font-weight:800;color:#111;
+  box-shadow:inset 0 -3px 0 rgba(0,0,0,.28),0 2px 0 rgba(0,0,0,.6)}
+.game-help .b-a i{background:#e5382c}.game-help .b-b i{background:#f1c232}.game-help .b-c i{background:#43b04a}.game-help .b-d i{background:#3f86e0}
+.game-help .b-b{margin-bottom:6px}.game-help .b-c{margin-bottom:12px}.game-help .b-d{margin-bottom:18px}   /* arco, como no painel */
+.game-help .ah-btn .kc{font-size:11px;padding:0 4px}
+.game-help .ah-btn small{color:var(--dim);font-size:10.5px;line-height:1.15;text-align:center}
+.game-help .ah-small{display:flex;gap:10px;margin:8px 0 0;flex-wrap:wrap}
+.game-help .ah-pill{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--txt)}
+.game-help .ah-pill b{color:var(--gold)}
+.game-help .ah-row{display:flex;gap:10px;align-items:baseline;margin:3px 0}
+.game-help .ah-row b{min-width:34px;color:var(--gold);font-weight:700;white-space:nowrap}
+.game-help .ah-exit{margin-top:8px;padding-top:6px;border-top:1px solid var(--line)}
+.game-help .ah-note{margin-top:6px;color:var(--dim);font-size:12.5px}
+
+/* Jogando no fliperama: o canvas deixa o mouse passar e o iframe do emulador (camada CSS3D atras do canvas) fica clicavel */
+body.playing-arcade #app{pointer-events:none}
+body.playing-arcade #arcade-container,body.playing-arcade #arcade-iframe{pointer-events:auto!important}
+
+/* Terminal do caixa: o cartao #term-card vive numa camada atras do canvas, encaixado na tela 3D do computador */
+#terminal-container{pointer-events:none}
+body.terminal-open #terminal-container{pointer-events:auto}
+body.terminal-open #app{pointer-events:none}
+#terminal-container #term-card{width:640px!important;height:502px!important;max-width:none!important;max-height:none!important;
+  box-shadow:none!important;border:0!important;background:#040d07!important}
+
+/* Jogo secreto (GTA) na tela do computador: igual ao fliperama (canvas deixa o mouse passar, iframe clicavel) */
+body.playing-gta #app{pointer-events:none}
+#gta-container{pointer-events:none}
+body.playing-gta #gta-container,body.playing-gta #gta-iframe{pointer-events:auto!important}
+
+/* Saida do jogo secreto: so mouse (nenhuma tecla levanta; o ESC e do proprio jogo) */
+#gta-exit{position:fixed;top:48px;right:14px;z-index:46;display:none;padding:7px 14px;background:var(--bg2);color:var(--gold);
+  border:1px solid var(--gold);font:700 14px/1 var(--mono);letter-spacing:.06em;cursor:pointer}
+#gta-exit:hover{background:var(--gold);color:#000}
+body.playing-gta #gta-exit{display:block}
+
+/* Primeira visao do cliente: clarao de cor rapido (vermelho/ciano) e inversao de cores do canvas */
+#sight-flash{position:fixed;inset:0;z-index:97;pointer-events:none;opacity:0;mix-blend-mode:screen;background:#ff0033}
+#sight-flash.on{animation:sightFlash .55s linear}
+@keyframes sightFlash{
+  0%{opacity:0;background:#ff0033} 6%{opacity:.8;background:#ff0033} 16%{opacity:.05}
+  28%{opacity:.65;background:#00f0ff} 42%{opacity:0} 55%{opacity:.35;background:#ff00aa} 70%{opacity:0} 100%{opacity:0}}
+#app.sight-glitch{animation:sightGlitch .5s steps(1,end)}
+@keyframes sightGlitch{
+  0%{filter:invert(1) hue-rotate(120deg)} 12%{filter:hue-rotate(160deg) saturate(3) contrast(1.4)}
+  24%{filter:invert(.6) hue-rotate(300deg)} 38%{filter:saturate(2.2) contrast(1.25)} 52%{filter:none} 100%{filter:none}}
+
+/* Final do heroi: vinheta, barras de cinema e clarao */
+#hero-cine { position: fixed; inset: 0; z-index: 96; pointer-events: none; opacity: 0; transition: opacity 1.6s ease; }
+#hero-cine.on { opacity: 1; }
+#hero-cine .vig { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 55%, rgba(0,0,0,0) 30%, rgba(0,0,0,.72) 100%); }
+#hero-cine .bar { position: absolute; left: 0; right: 0; height: 0; background: #000; transition: height 1.6s ease; }
+#hero-cine .bar.top { top: 0; } #hero-cine .bar.bot { bottom: 0; }
+#hero-cine.on .bar { height: 9vh; }
+#hero-cine .flash { position: absolute; inset: 0; background: #fff8d8; opacity: 0; }
+#hero-cine .flash.pop { animation: heroFlash 1.1s ease-out; }
+@keyframes heroFlash { 0% { opacity: .95; } 100% { opacity: 0; } }
+/* fim do heroi: o popup do Rango fica acima do fade para preto (o resto do HUD some ate ele acabar) */
+body.hero-top #hud { z-index: 1000; }
+body.hero-top #hud > :not(#ach-popup) { visibility: hidden; }
+
+/* Quest do porquinho: contador de moedas (entities/Cardboard.js), discreto, abaixo do item na mao */
+#coin-counter{position:absolute;left:18px;top:64px;display:flex;align-items:center;gap:8px;padding:4px 14px 4px 10px;
+  font:13px/1.3 var(--serif);letter-spacing:.06em;color:var(--txt);text-transform:uppercase;
+  background:linear-gradient(90deg,rgba(0,0,0,.6),transparent);border-left:2px solid var(--gold);
+  opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s;text-shadow:1px 1px 0 #000}
+#coin-counter.on{opacity:1;visibility:visible}
+#coin-counter .coin-ico{display:inline-block;width:11px;height:11px;border-radius:50%;
+  background:radial-gradient(circle at 35% 35%,#f4dc84,#c19a32 60%,#7d5f17);box-shadow:0 0 0 1px #4a3809}
+
+/* File "ZTA" (entities/Pig.js): papel envelhecido estilo Resident Evil */
+#rusbe-file{position:fixed;inset:0;z-index:58;display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  background:radial-gradient(ellipse at center,rgba(8,7,6,.82),rgba(0,0,0,.96));cursor:pointer}
+#rusbe-file.on{display:flex;animation:fileIn .35s ease-out}
+@keyframes fileIn{from{opacity:0}to{opacity:1}}
+#rusbe-file .file-paper{width:min(440px,84vw);min-height:min(520px,62vh);box-sizing:border-box;padding:56px 44px;
+  background:#d8cba4;background-image:radial-gradient(ellipse at 20% 15%,rgba(120,90,40,.18),transparent 55%),
+  radial-gradient(ellipse at 85% 90%,rgba(90,60,25,.28),transparent 50%),linear-gradient(180deg,#ddd0a8,#c9b98e);
+  box-shadow:0 10px 40px rgba(0,0,0,.8),inset 0 0 60px rgba(90,60,20,.35);transform:rotate(-1.2deg);
+  font-family:"Reenie Beanie","Caveat","Segoe Print","Bradley Hand",cursive;color:#1d2a52}   /* caneta azul, a mao */
+#rusbe-file .file-line{margin:0 0 34px;font-size:38px;line-height:1.25;letter-spacing:.01em;transform:rotate(-1.5deg);text-shadow:0 0 1px rgba(20,30,80,.55)}
+#rusbe-file .file-cmd{margin-bottom:18px;transform:rotate(0.8deg);color:#16224a}
+#rusbe-file .file-word{margin:0;font:700 64px/1 "Caveat","Reenie Beanie",cursive;letter-spacing:.12em;color:#b3140f;transform:rotate(-3deg) skewX(-6deg);text-shadow:0 0 1px rgba(120,10,8,.6)}
+#rusbe-file .file-hint{font:12px/1 var(--mono);letter-spacing:.14em;color:var(--dim)}
+
+
+/* Shotgun (entities/Shotgun.js): 6 cartuchos, so com a arma na mao */
+#shell-counter{position:absolute;left:18px;top:100px;display:flex;align-items:flex-end;gap:5px;padding:6px 12px 6px 10px;
+  background:linear-gradient(90deg,rgba(0,0,0,.6),transparent);border-left:2px solid var(--gold);
+  opacity:0;visibility:hidden;transition:opacity .25s,visibility .25s}
+#shell-counter.on{opacity:1;visibility:visible}
+#shell-counter .shell{display:block;width:7px;height:20px;border-radius:2px 2px 1px 1px;
+  background:linear-gradient(180deg,#c23a2e 0,#8e2219 68%,#d4ad4a 68%,#9c7a26 100%);box-shadow:0 0 0 1px #1a0d08;transition:opacity .15s}
+#shell-counter .shell.spent{opacity:.18;filter:grayscale(1)}
+
+/* Modo HUNT (entities/Hunt.js): placar de 6 alvos, faixa de abertura e pausa sem pointer lock */
+body.hunt-mode #look, body.hunt-mode #coin-counter, body.hunt-mode #hint{display:none}
+#hunt-hud{position:absolute;left:50%;top:14px;transform:translateX(-50%);display:none;flex-direction:column;align-items:center;gap:6px}
+#hunt-hud.on{display:flex}
+#hunt-hud .hunt-pips{display:flex;gap:8px;padding:7px 14px;background:linear-gradient(90deg,transparent,rgba(0,0,0,.65),transparent);
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+#hunt-hud .hunt-pips i{display:block;width:14px;height:14px;border-radius:50%;border:1px solid var(--line2);background:rgba(0,0,0,.4);
+  transition:background .2s,border-color .2s,transform .2s}
+#hunt-hud .hunt-pips i.run{border-color:var(--txt);background:rgba(240,236,223,.25);transform:scale(1.15)}
+#hunt-hud .hunt-pips i.hit{border-color:var(--gold);background:radial-gradient(circle at 35% 30%,var(--gold-hi),var(--gold) 55%,var(--gold-lo))}
+#hunt-hud .hunt-pips i.pass{border-color:var(--red);background:rgba(163,50,43,.35);opacity:.6}
+#hunt-hud .hunt-hint{font:11px/1.2 var(--mono);letter-spacing:.12em;color:var(--dim);text-shadow:1px 1px 0 #000}
+#hunt-banner{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);text-align:center;opacity:0;visibility:hidden;
+  transition:opacity .5s,visibility .5s;pointer-events:none}
+#hunt-banner.on{opacity:1;visibility:visible}
+#hunt-banner .hb-title{font:700 clamp(44px,11vw,96px)/1 var(--serif);letter-spacing:.32em;margin-right:-.32em;color:var(--gold);
+  text-shadow:0 0 18px rgba(0,0,0,.9),2px 2px 0 #000}
+#hunt-banner .hb-sub{margin-top:10px;font:15px/1.3 var(--mono);letter-spacing:.14em;color:var(--txt);text-transform:uppercase;text-shadow:1px 1px 0 #000}
+#hunt-pause{position:fixed;inset:0;z-index:90;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);cursor:pointer}
+#hunt-pause.on{display:flex}
+#hunt-pause .hp-card{min-width:min(320px,86vw);padding:20px 22px;background:var(--bg2);border:1px solid var(--line);border-left:3px solid var(--gold);text-align:center}
+#hunt-pause .hp-title{font:700 22px/1 var(--serif);letter-spacing:.3em;color:var(--gold)}
+#hunt-pause .hp-hint{margin:10px 0 16px;font:13px/1.4 var(--mono);color:var(--dim)}
+#hunt-pause .hp-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+#hunt-pause button,#final-screen .fs-btn{min-height:46px;padding:0 22px;background:rgba(0,0,0,.4);border:1px solid var(--line2);color:var(--txt);
+  font:14px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
+#hunt-pause button:hover,#final-screen .fs-btn:hover{border-color:var(--gold);color:var(--gold)}
+#hunt-pause .hp-resume{border-color:var(--gold);color:var(--gold)}
+
+/* Tela final do HUNT (ui/FinalScreen.js): resultado, conquistas, canal, creditos rolando, compartilhar, recomecar */
+#final-screen{position:fixed;inset:0;z-index:1000;display:none;overflow:auto;-webkit-overflow-scrolling:touch;
+  background:radial-gradient(ellipse at 50% 30%,rgba(18,15,10,.94),rgba(2,2,2,.985) 70%)}
+#final-screen.on{display:block;animation:fileIn .6s ease-out}
+body.final-open #hud{z-index:1001}
+body.final-open #hud > :not(#ach-popup){visibility:hidden}
+body.final-open #mAct, body.final-open #stick, body.final-open #snd{display:none!important}
+#final-screen .fs-wrap{box-sizing:border-box;max-width:1080px;min-height:100%;margin:0 auto;padding:28px 24px 22px;display:flex;flex-direction:column;gap:18px}
+#final-screen .fs-head{text-align:center}
+#final-screen .fs-title{font:700 clamp(28px,5vw,46px)/1.05 var(--serif);letter-spacing:.22em;margin-right:-.22em;color:var(--gold);text-shadow:2px 2px 0 #000}
+#final-screen .fs-result{margin-top:8px;font:16px/1.3 var(--mono);color:var(--txt);letter-spacing:.04em}
+#final-screen .fs-time{margin-top:4px;font:13px/1.3 var(--mono);color:var(--dim);letter-spacing:.08em}
+#final-screen .fs-grid{flex:1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;min-height:0}
+#final-screen .fs-col{display:flex;flex-direction:column;gap:18px;min-height:0}
+#final-screen .fs-panel{background:rgba(6,6,5,.72);border:1px solid var(--line);border-left:2px solid var(--gold);padding:12px 14px}
+#final-screen .fs-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;
+  font:12px/1.2 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--gold)}
+#final-screen .fs-ch-row{display:flex;align-items:center;gap:14px}
+#final-screen .fs-avatar{flex:none;width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--gold);background:#111}
+#final-screen .fs-ch-name{font:600 19px/1.25 var(--serif);color:var(--txt);word-break:break-word}
+#final-screen .fs-ch-link{display:inline-block;margin-top:6px;font:12px/1 var(--mono);letter-spacing:.12em;color:var(--gold);text-decoration:none;
+  border-bottom:1px solid var(--gold);padding-bottom:2px}
+#final-screen .ach-head{color:var(--gold);font:600 14px/1 var(--mono);letter-spacing:.1em;margin-bottom:8px}
+#final-screen .ach-row{border-bottom:1px solid rgba(240,236,223,.1);color:#6d6a62;padding:6px 4px}
+#final-screen .ach-row:not(.got){filter:grayscale(1)}
+#final-screen .ach-row.got{color:var(--txt)}
+#final-screen .ach-ic{background:rgba(0,0,0,.5);border-color:rgba(240,236,223,.18)}
+#final-screen .ach-row.got .ach-ic{background:radial-gradient(circle at 35% 30%,var(--gold-hi),var(--gold) 55%,var(--gold-lo));border-color:var(--gold);color:#1a1405}
+#final-screen .ach-rn{font-size:14px}
+#final-screen .ach-rt{color:var(--gold);font-size:13px}
+#final-screen .fs-right .fs-panel{flex:1;display:flex;flex-direction:column;min-height:0}
+#final-screen .fs-skip{background:none;border:1px solid var(--line);color:var(--dim);font:11px/1 var(--mono);letter-spacing:.1em;padding:6px 10px;cursor:pointer}
+#final-screen.fs-skipped .fs-skip{visibility:hidden}
+#final-screen .fs-credits{position:relative;flex:1;min-height:260px;max-height:62vh;overflow-y:auto;cursor:pointer;scrollbar-width:thin;scrollbar-color:var(--gold) transparent;
+  -webkit-mask-image:linear-gradient(transparent,#000 10%,#000 90%,transparent);mask-image:linear-gradient(transparent,#000 10%,#000 90%,transparent)}
+#final-screen .fs-roll{padding:40px 2px 60px;font:12px/1.5 var(--mono);color:var(--dim)}
+#final-screen .fs-roll [style]{background:transparent!important;border-color:rgba(240,236,223,.16)!important;color:var(--dim)!important;text-shadow:none!important}
+#final-screen .fs-roll b,#final-screen .fs-roll span[style*="font-weight:bold"]{color:var(--txt)!important}
+#final-screen .fs-roll a{color:var(--gold)!important;word-break:break-all}
+#final-screen .fs-foot{position:sticky;bottom:0;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;padding:12px 0 6px;
+  background:linear-gradient(transparent,rgba(2,2,2,.97) 35%)}
+#final-screen .fs-foot .fs-btn{min-width:200px;min-height:52px}
+#final-screen .fs-restart{border-color:var(--gold)!important;color:var(--gold)!important}
+@media (max-width:760px){
+  #final-screen .fs-wrap{padding:18px 16px 16px;gap:14px}
+  #final-screen .fs-grid{grid-template-columns:1fr}
+  #final-screen .fs-credits{min-height:220px;max-height:46vh}
+  #final-screen .fs-foot .fs-btn{flex:1 1 140px;min-width:0;min-height:56px}
+  #final-screen .ach-rn{font-size:13px}
+  #hunt-hud .hunt-pips i{width:16px;height:16px}
+}
+/* HUNT no touch: arrastar na tela e no #stick mira (sem rolagem/zoom do navegador cancelando os ponteiros) */
+body.hunt-mode canvas, body.hunt-mode #stick, body.hunt-mode #mAct{touch-action:none}
+
+/* Terminal do caixa no touch (main.js ensureTerminalLayer): overlay DOM em tela cheia no lugar da homografia.
+   Mesmo #term-card (abas, comandos, tratadores); altura = viewport visivel, para o teclado virtual nao cobrir o prompt. */
+#terminal-touch{display:none;position:fixed;left:0;top:0;width:100%;height:var(--vvh,100%);z-index:90;background:#000;
+  padding:var(--sat) var(--sar) var(--sab) var(--sal);overscroll-behavior:contain}
+body.terminal-open #terminal-touch{display:flex}
+#terminal-touch #term-card{width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;
+  border:0!important;box-shadow:none!important;-webkit-user-select:text;user-select:text}
+#terminal-touch .win95-titlebar{padding:6px 8px 6px 12px!important;gap:8px}
+#terminal-touch .win95-titlebar span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#terminal-touch #term-close{flex:none;min-width:52px;min-height:44px;font-size:15px!important}
+#terminal-touch [id^="term-tab-"]{min-height:46px;font-size:12px!important;padding:6px 4px!important}
+#terminal-touch [id^="term-panel-"]{font-size:13.5px!important;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y}
+#terminal-touch #term-cli-input,#terminal-touch #term-feed{font-size:16px!important;min-height:40px}
+#terminal-touch #term-btn-load,#terminal-touch #term-btn-cache{min-height:44px;font-size:13px!important}
+#terminal-touch #term-exit{min-height:46px;min-width:120px;font-size:14px!important}
+#terminal-touch #term-card > div:last-child > span{display:none}
+#terminal-touch #term-card > div:last-child{justify-content:flex-end!important}
+#terminal-touch .ach-row{padding:8px 6px}
+@media (max-width:420px){ #terminal-touch [id^="term-tab-"]{font-size:10.5px!important} }
+
+
+/* ===== Polimento de UI: foco, estados, hierarquia, movimento reduzido ===== */
+/* foco por teclado visivel em todo controle (os modais forcam border-color com !important, entao usam outline) */
+:focus-visible{outline:2px solid var(--focus)!important;outline-offset:2px}
+#feed:focus-visible,#term-feed:focus-visible,#share-url-input:focus-visible{outline-offset:0}
+#term-cli-input:focus-visible{outline:none!important}
+::selection{background:rgba(212,173,74,.45);color:#fff}
+
+/* cartao inicial: painel com cabecalho dourado e sombra */
+#card{padding:30px 28px 24px;
+  background:linear-gradient(180deg,rgba(16,14,10,.92),rgba(5,5,4,.92));border:1px solid var(--line);border-top:2px solid var(--gold);
+  box-shadow:var(--panel-shadow),inset 0 0 40px rgba(0,0,0,.5)}
+#card h2{font-weight:600;letter-spacing:.04em;margin:0 0 6px}
+#card p{font-size:15px;margin:0 0 14px}
+/* tipografia da tela inicial: sobretitulo dourado + nome em condensada caixa-alta */
+#card h2{font:700 34px/1.05 "Barlow Condensed",var(--serif);letter-spacing:.08em;text-transform:uppercase;margin:0 0 10px;text-shadow:0 2px 0 #000}
+#card h2 br{display:none}
+#card h2 small{display:block;margin-bottom:6px;font:600 12px/1 var(--mono);letter-spacing:.34em;color:var(--gold);text-shadow:none}
+#card h2::after{content:"";display:block;width:56px;height:2px;margin:12px auto 0;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+#card p{font-size:14px;letter-spacing:.06em;color:var(--dim);margin:0 0 14px}
+#feed{font-size:15px;line-height:1.4;letter-spacing:.01em}
+#btGo{font:600 17px/1 "Barlow Condensed",var(--serif);letter-spacing:.22em;padding:11px;border-color:var(--gold);color:var(--gold-hi)}
+#status{font-size:13px;letter-spacing:.04em}
+@media (max-width:420px){#card h2{font-size:28px}}
+#feed{border-color:var(--line2);transition:border-color .15s,box-shadow .15s}
+#feed::placeholder{color:#8f8a7b;opacity:1}
+#feed:hover{border-color:var(--txt)}
+#feed:focus{box-shadow:0 0 0 1px var(--gold),0 0 14px var(--gold-glow)}
+#btGo{border-color:var(--gold);color:var(--gold);font-weight:600;padding:11px;transition:border-color .15s,background .15s,color .15s,transform .1s}
+#btGo:hover:not(:disabled){background:var(--gold);color:var(--ink)}
+#btGo:active:not(:disabled){transform:translateY(1px)}
+#btGo:disabled{border-color:var(--line);color:var(--dim)}
+
+/* prompt de interacao: tecla em "keycap" dourado */
+#look{padding:7px 24px 7px 12px;border-color:var(--line2)}
+#look::before{border-color:var(--gold);color:var(--gold);background:rgba(0,0,0,.45);border-radius:2px}
+#hand,#toast .t,#coin-counter,#shell-counter{border-left-width:3px}
+
+/* botoes do deck e acoes: hover/active/foco consistentes */
+.b{transition:border-color .15s,background .15s,color .15s,transform .08s}
+.b:hover{background:rgba(212,173,74,.08);color:var(--gold-hi)}
+.b:active,.b.held{transform:translateY(1px)}
+.b.rec{color:#e0a39d}
+#snd:focus-visible,#fs-btn:focus-visible{opacity:1}
+.mb:hover{opacity:.8}
+.mb.on:hover{color:var(--gold-hi)}
+.mb:active{opacity:1}
+body.touch .mb:hover{opacity:.5}
+body.touch .mb.on:hover{opacity:.92}
+
+/* modais: hover/active/disabled legiveis (sobrepoe o reset !important) */
+#terminal-modal button,#share-modal button,#door-modal button,#arcade-modal button,#gta-modal button{
+  transition:border-color .15s,color .15s,background .15s!important}
+#terminal-modal button:hover,#share-modal button:hover,#door-modal button:hover,#arcade-modal button:hover,#gta-modal button:hover{
+  color:var(--gold-hi)!important;background:rgba(212,173,74,.1)!important}
+#terminal-modal button:active,#share-modal button:active,#door-modal button:active{background:rgba(212,173,74,.22)!important}
+#terminal-modal button:disabled,#share-modal button:disabled{opacity:.45;cursor:not-allowed}
+#terminal-modal input::placeholder,#share-modal input::placeholder{color:#8f8a7b!important;opacity:1}
+#term-card,#door-card,#share-modal>div{box-shadow:var(--panel-shadow)!important}
+#terminal-container #term-card,#terminal-touch #term-card{box-shadow:none!important}
+#share-modal #share-modal-qr{padding:10px}
+#door-modal #door-btn-leave:hover{border-color:var(--red)!important;color:#ffd0cb!important;background:rgba(163,50,43,.3)!important}
+
+/* pausa/final */
+#hunt-pause button,#final-screen .fs-btn{transition:border-color .15s,color .15s,background .15s}
+#hunt-pause button:hover,#final-screen .fs-btn:hover{background:rgba(212,173,74,.1)}
+#hunt-pause button:active,#final-screen .fs-btn:active{background:rgba(212,173,74,.22)}
+#final-screen .fs-skip{transition:border-color .15s,color .15s}
+#final-screen .fs-skip:hover{border-color:var(--gold);color:var(--gold)}
+#final-screen .fs-ch-link:hover{color:var(--gold-hi);border-color:var(--gold-hi)}
+#final-screen .fs-panel,#hunt-pause .hp-card,#deck,.game-help{box-shadow:var(--panel-shadow)}
+#final-screen .fs-roll{color:#cfcabb}
+#final-screen .ach-row{color:#8d897d}
+#gta-exit{transition:background .15s,color .15s}
+#gta-exit:active{transform:translateY(1px)}
+#ach-popup{box-shadow:0 6px 24px rgba(0,0,0,.6)}
+#ach-popup .ach-label{font-weight:600}
+
+/* aba CONQUISTAS do terminal: contraste AA sobre o verde escuro */
+.ach-row{color:#2fb85c;border-bottom-color:#124a24}
+.ach-row.got{color:#5dff99}
+
+/* movimento reduzido */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+  #toast .t{animation:toastLifeRM 3.2s forwards}
+  @keyframes toastLifeRM{0%,85%{opacity:1}100%{opacity:0}}
+}
+
+/* ===== seletor de idioma (src/i18n/boot.js) ===== */
+.b span.b-lbl{font-size:inherit;line-height:inherit}
+#card{position:relative}
+.lang-picker{display:flex;align-items:center;gap:4px}
+.lang-btn{min-width:30px;padding:3px 6px;background:rgba(0,0,0,.45);color:var(--dim);border:1px solid var(--line);border-radius:0;
+  font:600 11px/1.2 var(--mono);letter-spacing:.08em;cursor:pointer;transition:border-color .15s,color .15s,background .15s}
+.lang-btn:hover{border-color:var(--gold);color:var(--gold-hi)}
+.lang-btn.on{border-color:var(--gold);color:var(--ink);background:var(--gold);cursor:default}
+.lang-btn:focus-visible{outline:2px solid var(--focus)!important;outline-offset:2px}
+/* tela inicial: canto superior direito do cartao, fora do fluxo (nao mexe no resto do layout) */
+.lang-boot{position:absolute;top:6px;right:8px}
+body.touch #card{padding-top:46px}
+body.touch .lang-boot .lang-btn{min-width:44px;min-height:34px;font-size:13px}
+/* terminal (aba ESTOQUE): fosforo verde do RENTAL-OS */
+.lang-term{flex-wrap:wrap;margin-top:8px;font-size:10.5px}
+.lang-term .lang-label{font-weight:bold;color:#00ff66;margin-right:4px}
+.lang-term .lang-btn{background:#020904;color:#1da84c;border-color:#14592b;font-family:var(--mono);font-size:10.5px;padding:2px 8px}
+.lang-term .lang-btn:hover{border-color:#00ff66;color:#00ff66}
+.lang-term .lang-btn.on{background:#0a381a;color:#00ff66;border-color:#00ff66}
+.lang-term .lang-note{color:#1da84c;margin-left:6px}
+#terminal-touch .lang-term .lang-btn{min-width:48px;min-height:44px;font-size:13px}
+#terminal-modal .lang-term .lang-btn.on{border-color:var(--gold)!important;color:var(--gold)!important;background:rgba(212,173,74,.12)!important}
+
+/* contador da campainha (15x-25x): painel do HUD, dourado -> vermelho conforme a pressao (--bc vem do main.js) */
+#bell-counter{display:none;position:fixed;top:28px;left:50%;transform:translateX(-50%);z-index:96;pointer-events:none;--bc:var(--gold);
+  min-width:260px;max-width:min(92vw,420px);padding:9px 20px 10px;text-align:center;font-family:var(--mono);
+  background:var(--bg);border:1px solid var(--line);border-top:2px solid var(--bc);box-shadow:var(--panel-shadow),0 0 18px color-mix(in srgb,var(--bc) 35%,transparent);
+  transition:border-color .2s,box-shadow .2s}
+#bell-counter.hit #bell-counter-num{animation:bellHit .18s ease-out}
+@keyframes bellHit{from{transform:scale(1.18)}to{transform:scale(1)}}
+#bell-counter-title{font:600 11px/1 var(--mono);letter-spacing:.3em;text-transform:uppercase;color:var(--bc);margin-bottom:6px}
+#bell-counter-num{font:700 40px/1 "Barlow Condensed",var(--serif);letter-spacing:.1em;color:var(--txt);text-shadow:0 2px 0 #000}
+#bell-counter-msg{margin-top:6px;font:500 13px/1.3 var(--mono);letter-spacing:.08em;color:var(--dim);text-transform:uppercase}
+/* unica regra de posicao no touch (a duplicata com !important da secao de toque foi removida) */
+body.touch #bell-counter{top:calc(72px + var(--sat));min-width:0;width:max-content;padding:7px 14px 8px}
+body.touch #bell-counter-num{font-size:30px}
+body.touch #bell-counter-title{font-size:10px;letter-spacing:.22em;margin-bottom:4px}
+body.touch #bell-counter-msg{font-size:11px;margin-top:4px}
+
+/* Zoom do post-it do quadro (ui/PostitZoom.js): mesmo padrao do papel ZTA */
+#postit-zoom{position:fixed;inset:0;z-index:58;display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  background:radial-gradient(ellipse at center,rgba(8,7,6,.82),rgba(0,0,0,.96));cursor:pointer}
+#postit-zoom.on{display:flex;animation:fileIn .35s ease-out}
+#postit-zoom .pz-note{position:relative;width:min(360px,76vw);aspect-ratio:1;box-sizing:border-box;padding:56px 24px 28px;
+  background:linear-gradient(180deg,#fdf485 0 86%,#ecdf6a 100%);box-shadow:0 12px 36px rgba(0,0,0,.8),inset 0 0 40px rgba(150,120,20,.18);
+  transform:rotate(-2.2deg);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+  font:700 clamp(30px,9vw,46px)/1.08 "Caveat","Reenie Beanie","Segoe Print",cursive;color:#0a1a5c}
+#postit-zoom .pz-note::before{content:"";position:absolute;top:14px;left:50%;width:26px;height:26px;margin-left:-13px;border-radius:50%;
+  background:radial-gradient(circle at 36% 32%,#ffaaaa 0 14%,#cc2222 36%,#8a1212 100%);box-shadow:0 3px 5px rgba(0,0,0,.5)}
+#postit-zoom .pz-note::after{content:"";position:absolute;left:0;right:0;top:46px;height:2px;background:#db4848}
+#postit-zoom .pz-under{width:56%;height:10px;margin-top:6px;border-bottom:3px solid #0a1a5c;border-radius:0 0 60% 40%/0 0 100% 100%;transform:rotate(-1deg)}
+#postit-zoom .file-hint{font:12px/1 var(--mono);letter-spacing:.14em;color:var(--dim)}
+
+/* ===== Responsividade mobile: areas seguras, telas estreitas e paisagem (AJUSTES_FINAIS §8.3) ===== */
+/* Os overlays fixos tem padding inline no index.html; aqui ele passa a respeitar env(safe-area-inset-*)
+   (notch / Dynamic Island / recorte de camera / barra de gestos). */
+#terminal-modal,#share-modal,#door-modal{
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px))
+          max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))!important}
+#rusbe-file,#postit-zoom{
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px))
+          max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+/* o [X] de fechar: alvo de 44px e folga do canto superior direito, longe do entalhe */
+body.touch #share-modal-close,body.touch #door-modal-close,body.touch #term-close{
+  min-width:44px;min-height:44px;margin-left:10px;font-size:14px!important}
+
+/* telas estreitas: o QR e os botoes sociais nao podem empurrar o cartao para fora da tela */
+@media (max-width:480px){
+  #share-modal #share-modal-qr{min-width:148px!important;min-height:148px!important;padding:6px!important}
+  #share-modal #share-modal-qr>*{width:136px!important;height:136px!important}
+  #share-modal button{font-size:10px!important;padding:6px 8px!important}
+}
+@media (max-width:380px){
+  #share-modal #share-modal-qr{min-width:128px!important;min-height:128px!important}
+  #share-modal #share-modal-qr>*{width:116px!important;height:116px!important}
+  #share-modal>div{max-height:94vh;overflow-y:auto}
+}
+/* paisagem de celular: cartoes e papeis cabem na altura */
+@media (max-height:480px){
+  #share-modal>div,#door-modal>div{max-height:94vh;overflow-y:auto}
+  #terminal-modal .win95-titlebar,#door-modal .win95-titlebar{padding:4px 8px!important}
+  #rusbe-file{gap:10px}
+  #rusbe-file .file-paper{width:min(520px,88vw);min-height:0;max-height:86vh;overflow-y:auto;padding:24px 28px}
+  #rusbe-file .file-line{font-size:clamp(18px,4.6vh,24px);margin:0 0 14px}
+  #rusbe-file .file-word{font-size:clamp(30px,8vh,42px)}
+  #postit-zoom .pz-note{width:min(360px,44vh);max-height:82vh;padding:28px 18px 16px;
+    font-size:clamp(22px,6vh,34px)}
+  #rusbe-file .file-hint,#postit-zoom .file-hint{font-size:11px}
+}
+/* telas estreitas: o papel ZTA em retrato de celular pequeno */
+@media (max-width:380px){
+  #rusbe-file .file-paper{padding:36px 24px}
+  #rusbe-file .file-line{font-size:clamp(24px,8vw,30px);margin:0 0 24px}
+  #rusbe-file .file-word{font-size:clamp(38px,13vw,48px)}
+}

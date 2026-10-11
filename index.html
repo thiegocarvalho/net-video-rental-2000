@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport"
+    content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <title>Net Video Rental 2000</title>
+
+  <!-- Content Security Policy. Origens em uso hoje (qualquer host novo em src/ precisa entrar aqui):
+       script  = import map do Three.js (cdn.jsdelivr.net) + IFrame API do YouTube (www.youtube.com, s.ytimg.com)
+       style/font = Google Fonts;  frame = player do YouTube e emuladores do archive.org
+       connect = feed RSS via api.allorigins.win / api.rss2json.com e os espelhos do Invidious
+       img     = miniaturas *.ytimg.com, avatares *.ggpht.com / *.googleusercontent.com e o proxy wsrv.nl,
+                 mais data:/blob: das texturas de canvas e do favicon SVG -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.youtube.com https://s.ytimg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://*.ytimg.com https://*.ggpht.com https://*.googleusercontent.com https://wsrv.nl; connect-src 'self' data: blob: https://cdn.jsdelivr.net https://api.allorigins.win https://api.rss2json.com https://invidious.flokinet.to https://invidious.f5.si https://wsrv.nl https://*.ytimg.com; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://archive.org https://*.archive.org; media-src 'self' data: blob:; worker-src 'self' blob:; base-uri 'self'">
+
+  <!-- Favicon: fita VHS em pixel art (SVG inline, sem requisição) -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='20' y='6' rx='2' fill='%231a1a1a'/><rect width='26' height='4' x='3' y='8' fill='%23d4ad4a'/><rect width='24' height='9' x='4' y='15' rx='1' fill='%23333333'/><circle cx='10' cy='19' r='3' fill='%23f0ecdf'/><circle cx='22' cy='19' r='3' fill='%23f0ecdf'/></svg>">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- CDN do Three.js (import map abaixo): abre a conexão antes do primeiro import (LCP) -->
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Caveat:wght@500;700&family=Reenie+Beanie&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+
+  <!-- Canônica e alternativas por idioma (o i18n lê ?lang=; ver src/i18n/index.js) -->
+  <link rel="canonical" href="https://thiegocarvalho.github.io/net-video-rental-2000/">
+  <link rel="alternate" hreflang="pt-BR" href="https://thiegocarvalho.github.io/net-video-rental-2000/?lang=pt-BR">
+  <link rel="alternate" hreflang="en-GB" href="https://thiegocarvalho.github.io/net-video-rental-2000/?lang=en-GB">
+  <link rel="alternate" hreflang="es-ES" href="https://thiegocarvalho.github.io/net-video-rental-2000/?lang=es-ES">
+  <link rel="alternate" hreflang="x-default" href="https://thiegocarvalho.github.io/net-video-rental-2000/">
+
+  <!-- Metadados de Compartilhamento & Open Graph (OG) -->
+  <meta name="description" data-i18n-attr="content:ui.meta.description" content="Visite uma autêntica locadora de fitas VHS dos anos 90 totalmente em 3D no navegador! Escolha fitas do seu canal favorito do YouTube, coloque no videocassete e assista na TV CRT com som retrô!">
+  <meta name="theme-color" content="#050504">
+
+  <!-- Open Graph / WhatsApp / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Net Video Rental 2000">
+  <meta property="og:url" content="https://thiegocarvalho.github.io/net-video-rental-2000/">
+  <meta property="og:title" data-i18n-attr="content:ui.meta.og_title" content="Net Video Rental 2000 · Locadora Retrô de Fitas VHS em 3D">
+  <meta property="og:description" data-i18n-attr="content:ui.meta.og_description" content="Visite uma locadora dos anos 90 em 3D no navegador. Coloque fitas do seu canal favorito no videocassete e assista na TV CRT de tubo com som retrô!">
+  <!-- PENDÊNCIA (AJUSTES_FINAIS §9.3.1): o banner horizontal 1200x630 ainda não existe no repositório.
+       Enquanto isso as tags apontam para o pôster real (512x1024) com URL ABSOLUTA — WhatsApp/Facebook/X
+       ignoram caminhos relativos e um arquivo inexistente daria 404 no cartão. Quando
+       posters/og-share-1200x630.jpg existir, trocar as 4 URLs e as dimensões abaixo. -->
+  <meta property="og:image" content="https://thiegocarvalho.github.io/net-video-rental-2000/posters/poster1.jpeg">
+  <meta property="og:image:secure_url" content="https://thiegocarvalho.github.io/net-video-rental-2000/posters/poster1.jpeg">
+  <meta property="og:image:type" content="image/jpeg">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="1024">
+  <meta property="og:image:alt" data-i18n-attr="content:ui.meta.og_image_alt" content="Net Video Rental 2000 — Locadora Retrô 3D de Fitas VHS no Navegador">
+  <meta property="og:locale" content="pt_BR">
+
+  <!-- Twitter / X Cards -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" data-i18n-attr="content:ui.meta.og_title" content="Net Video Rental 2000 · Locadora Retrô de Fitas VHS em 3D">
+  <meta name="twitter:description" data-i18n-attr="content:ui.meta.og_description" content="Visite uma locadora dos anos 90 em 3D no navegador. Coloque fitas do seu canal favorito no videocassete e assista na TV CRT de tubo com som retrô!">
+  <meta name="twitter:image" content="https://thiegocarvalho.github.io/net-video-rental-2000/posters/poster1.jpeg">
+  <meta name="twitter:image:alt" data-i18n-attr="content:ui.meta.og_image_alt" content="Net Video Rental 2000 — Locadora Retrô 3D de Fitas VHS no Navegador">
+
+  <!-- Schema.org (JSON-LD): jogo 3D de navegador, para resultados ricos na busca -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": ["VideoGame", "WebApplication"],
+    "name": "Net Video Rental 2000",
+    "url": "https://thiegocarvalho.github.io/net-video-rental-2000/",
+    "description": "Locadora retrô 3D de fitas VHS no navegador. Assista a vídeos do YouTube em televisores de tubo CRT dos anos 90.",
+    "genre": ["Simulation", "Retro", "Horror", "Psychological"],
+    "gamePlatform": "Web Browser",
+    "applicationCategory": "Game",
+    "operatingSystem": "Any",
+    "inLanguage": ["pt-BR", "en-GB", "es-ES"],
+    "author": {
+      "@type": "Person",
+      "name": "Thiego Carvalho"
+    }
+  }
+  </script>
+
+  <script src="libs/qrcode.min.js" defer></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js",
+      "three/examples/jsm/loaders/GLTFLoader.js": "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/loaders/GLTFLoader.js",
+      "three/examples/jsm/renderers/CSS3DRenderer.js": "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/renderers/CSS3DRenderer.js",
+      "three/examples/jsm/utils/SkeletonUtils.js": "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/utils/SkeletonUtils.js"
+    }
+  }
+  </script>
+  <!-- async/defer é seguro: src/services/YouTubePlayer.js NÃO depende de onYouTubeIframeAPIReady,
+       initYtPlayer() é chamado a cada quadro em tick() e só cria o player quando YT.Player existe. -->
+  <script src="https://www.youtube.com/iframe_api" async defer></script>
+</head>
+
+<body>
+  <div id="diag" role="status"></div>
+  <div id="fps"></div>
+  <main id="app" aria-label="Net Video Rental 2000"></main>
+  <button id="gta-exit" type="button" data-i18n="gta.exit">✕ LEVANTAR DO COMPUTADOR</button>
+  <div id="arcade-layer" aria-hidden="true"></div>
+  <div id="css-app" aria-hidden="true"></div>
+  <div id="grade" aria-hidden="true"></div>
+
+  <div id="crt" style="z-index:2; position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;">
+    <div id="crtInner">
+      <canvas id="fx" width="480" height="360"></canvas>
+      <div id="scan"></div>
+      <div id="bloom"></div>
+      <div id="osd">
+        <div id="osdTop">
+          <div id="osdMode"></div>
+          <div id="osdCounter"></div>
+        </div>
+        <div id="osdMsg"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="hud">
+    <div id="cross"></div>
+    <div id="look" role="status" aria-live="polite"></div>
+    <div id="hand"></div>
+    <div id="toast" role="status" aria-live="polite"></div>
+    <div id="ach-popup" role="status" aria-live="polite"><div class="ach-icon"></div><div class="ach-text"><div class="ach-label"></div><div class="ach-name"></div></div></div>
+    <div id="hint"></div>
+  </div>
+  <button id="snd" type="button" data-i18n="hud.sound_on">SOM: LIGADO</button>
+
+  <div id="deck" role="group" aria-label="Videocassete" data-i18n-aria="ui.deck.aria">
+    <div id="deckTop">
+      <div id="deckName" data-i18n="deck.name">Videocassete VX-9000</div>
+      <div id="deckLcd">- - - -</div>
+    </div>
+    <div id="deckDesc" data-i18n="deck.desc">4 cabeças · Hi-Fi · Tracking automático</div>
+    <div id="btns">
+      <button class="b" type="button" data-a="rew" aria-label="Rebobinar" data-i18n-aria="ui.deck.rew_aria"><span>◀◀</span><span class="b-lbl" data-i18n="ui.deck.rew">REBOBINA</span></button>
+      <button class="b" type="button" data-a="play" aria-label="Play" data-i18n-aria="ui.deck.play_aria"><span>▶</span><span class="b-lbl" data-i18n="ui.deck.play">PLAY</span></button>
+      <button class="b" type="button" data-a="pause" aria-label="Pausa" data-i18n-aria="ui.deck.pause_aria"><span>❚❚</span><span class="b-lbl" data-i18n="ui.deck.pause">PAUSA</span></button>
+      <button class="b" type="button" data-a="ff" aria-label="Avançar" data-i18n-aria="ui.deck.ff_aria"><span>▶▶</span><span class="b-lbl" data-i18n="ui.deck.ff">AVANÇA</span></button>
+      <button class="b" type="button" data-a="stop" aria-label="Stop" data-i18n-aria="ui.deck.stop_aria"><span>■</span><span class="b-lbl" data-i18n="ui.deck.stop">STOP</span></button>
+      <button class="b rec" type="button" data-a="eject" aria-label="Ejetar" data-i18n-aria="ui.deck.eject_aria"><span>⏏</span><span class="b-lbl" data-i18n="ui.deck.eject">EJETA</span></button>
+    </div>
+    <div id="trk"><span data-i18n="deck.tracking">TRACKING</span>
+      <button class="b" type="button" data-a="trkd" aria-label="Tracking menos" data-i18n-aria="ui.deck.trk_down_aria" style="padding:4px 8px">▼</button>
+      <div id="trkBar">
+        <div id="trkDot"></div>
+      </div>
+      <button class="b" type="button" data-a="trku" aria-label="Tracking mais" data-i18n-aria="ui.deck.trk_up_aria" style="padding:4px 8px">▲</button>
+    </div>
+    <div id="deckKeys" data-i18n="deck.keys">[W] Play/Pausa · [A] Rebobina · [D] Avança · [E] Ejeta · [S] Levantar</div>
+
+  </div>
+
+    <!-- Cartao de ajuda do fliperama: aparece enquanto o jogador esta sentado nele -->
+  <div id="arcade-help" class="game-help">
+    <div class="ah-title" data-i18n="ui.arcade.title">FLIPERAMA</div>
+    <div class="ah-panel">
+      <div class="ah-stick">
+        <div class="ah-ball"></div>
+        <div class="ah-dpad">
+          <span class="kc k-up">↑</span><span class="kc k-left">←</span><span class="kc k-down">↓</span><span class="kc k-right">→</span>
+        </div>
+        <div class="ah-cap" data-i18n-html="ui.arcade.stick">alavanca<br>(setas)</div>
+      </div>
+      <div class="ah-btns">
+        <div class="ah-btn b-a"><i>A</i><span class="kc">Ctrl</span><small data-i18n-html="ui.arcade.lp">soco<br>fraco</small></div>
+        <div class="ah-btn b-b"><i>B</i><span class="kc">Alt</span><small data-i18n-html="ui.arcade.lk">chute<br>fraco</small></div>
+        <div class="ah-btn b-c"><i>C</i><span class="kc" data-i18n="ui.key.space">Espaço</span><small data-i18n-html="ui.arcade.hp">soco<br>forte</small></div>
+        <div class="ah-btn b-d"><i>D</i><span class="kc">Shift</span><small data-i18n-html="ui.arcade.hk">chute<br>forte</small></div>
+      </div>
+    </div>
+    <div class="ah-small">
+      <div class="ah-pill"><span class="kc">5</span> <b>COIN</b> <span data-i18n="ui.arcade.coin">colocar ficha</span></div>
+      <div class="ah-pill"><span class="kc">1</span> <b>START</b> <span data-i18n="ui.arcade.start">jogador 1</span></div>
+    </div>
+    <div class="ah-row ah-exit"><b>ESC</b><span data-i18n="ui.arcade.exit">levantar (o jogo continua rodando)</span></div>
+    <div class="ah-note" data-i18n-html="ui.arcade.note"><b>Sem som?</b> Clique no ícone de <b>alto-falante</b>, ao lado direito do jogo (ele começa mudo).</div>
+  </div>
+
+  <div id="gta-help" class="game-help">
+    <div class="ah-title" data-i18n="ui.gta.title">PROGRAMA SECRETO</div>
+    <div class="ah-small" style="margin-top:0;flex-direction:column;gap:5px">
+      <div class="ah-pill" data-i18n-html="ui.gta.run"><span class="kc">Clique</span> na tela e depois em <b>Run</b> (↑ ↓ e <span class="kc">Enter</span>)</div>
+      <div class="ah-pill"><span class="kc">←</span><span class="kc">↑</span><span class="kc">↓</span><span class="kc">→</span> <span data-i18n="ui.gta.move">andar e dirigir</span></div>
+      <div class="ah-pill" data-i18n-html="ui.gta.keys"><span class="kc">Ctrl</span> atirar · <span class="kc">Enter</span> entrar/sair do carro</div>
+      <div class="ah-pill" data-i18n-html="ui.gta.other">Outras teclas: menu <b>Choose Controls</b> do jogo</div>
+    </div>
+    <div class="ah-row ah-exit"><b>MOUSE</b><span data-i18n-html="ui.gta.exit">botão <b>LEVANTAR</b> (canto superior direito); o jogo é encerrado</span></div>
+    <div class="ah-note" data-i18n-html="ui.gta.note">Nenhuma tecla levanta: o <b>ESC</b> e as demais são do jogo.</div>
+  </div>
+
+  <div id="stick" aria-hidden="true">
+    <div id="knob"></div>
+  </div>
+  <div id="mAct" role="toolbar" aria-label="Ações" data-i18n-aria="ui.actions.aria">
+    <button class="mb" type="button" id="mb1">
+      <span class="mb-key">[E]</span><span class="mb-lbl">USAR</span>
+    </button>
+    <button class="mb" type="button" id="mb2">
+      <span class="mb-key">[F]</span><span class="mb-lbl">VERIFICAR</span>
+    </button>
+    <button class="mb" type="button" id="mb3">
+      <span class="mb-key">[ESC]</span><span class="mb-lbl">SAIR</span>
+    </button>
+    <button class="mb" type="button" id="mb4" style="display:none">
+      <span class="mb-key">[W]</span><span class="mb-lbl">PLAY/PAUSE</span>
+    </button>
+    <button class="mb" type="button" id="mb5" style="display:none">
+      <span class="mb-key">[A]</span><span class="mb-lbl">REBOBINAR</span>
+    </button>
+    <button class="mb" type="button" id="mb7" style="display:none">
+      <span class="mb-key">[CLIQUE]</span><span class="mb-lbl">ATIRAR</span>
+    </button>
+    <!-- Botao de laboratorio: so aparece com ?debug (main.js o esconde quando !DEBUG). Texto de debug, sem i18n. -->
+    <button class="mb" type="button" id="mb6" style="display:none">
+      <span class="mb-key">[C]</span><span class="mb-lbl">CLIENTE</span>
+    </button>
+  </div>
+
+  <div id="boot" role="dialog" aria-labelledby="boot-title">
+    <div id="card">
+      <h2 id="boot-title" data-i18n-html="boot.title"><small>Bem-vindo à</small><br>Net Video Rental 2000</h2>
+      <p id="boot-sub" data-i18n="boot.subtitle">Cole o link do canal ou da playlist</p>
+      <textarea id="feed" aria-labelledby="boot-sub" placeholder="https://www.youtube.com/..." spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+      <button id="btGo" type="button" data-i18n="boot.enter">Entrar</button>
+      <div id="status" role="status" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <!-- Terminal Verde do Caixa (RENTAL-OS) com Manifesto de Créditos 3D e Gerenciamento -->
+  <div id="terminal-modal" role="dialog" aria-modal="true" aria-label="Terminal do caixa" data-i18n-aria="ui.term.aria" style="display:none; position:fixed; inset:0; z-index:90; align-items:center; justify-content:center; background:rgba(0,0,0,0.85); backdrop-filter:blur(3px); padding:16px;">
+    <div id="term-card" style="position:relative; width:800px; height:600px; max-width:96vw; max-height:92vh; display:flex; flex-direction:column; background:#040d07; border:2px solid #00ff66; box-shadow:0 0 30px rgba(0,255,102,0.4), inset 0 0 15px rgba(0,255,102,0.15); color:#22ff77; font-family:var(--mono); overflow:hidden;">
+      
+      <!-- Scanlines CRT -->
+      <div style="position:absolute; inset:0; pointer-events:none; background:repeating-linear-gradient(to bottom, rgba(0,255,102,0.035) 0 1px, transparent 1px 3px); z-index:5;"></div>
+
+      <!-- Barra de Título Verde Retrô -->
+      <div class="win95-titlebar" style="position:relative; z-index:6; background:#062612; color:#00ff66; padding:8px 12px; font-weight:bold; font-size:12px; display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #00ff66; text-shadow:0 0 6px rgba(0,255,102,0.6);">
+        <span data-i18n="ui.term.titlebar">● RENTAL-OS v1.996 · TERMINAL DO CAIXA · [PORTA COM1: 9600 BAUD ONLINE]</span>
+        <button id="term-close" type="button" aria-label="Fechar terminal" data-i18n-aria="ui.term.close_aria" style="cursor:pointer; background:#020904; color:#00ff66; border:1px solid #00ff66; padding:3px 8px; font-family:var(--mono); font-weight:bold; font-size:11px;">[X]</button>
+      </div>
+
+      <!-- Abas de Navegação -->
+      <div role="tablist" aria-label="Abas do terminal" data-i18n-aria="ui.term.tabs_aria" style="position:relative; z-index:6; display:flex; border-bottom:1px solid #14592b; background:#020904;">
+        <button id="term-tab-cli" type="button" role="tab" data-i18n="terminal.tab_cli" style="flex:1; padding:8px 10px; background:#031308; color:#18803c; border:none; border-right:1px solid #14592b; font-family:var(--mono); font-weight:bold; font-size:11px; cursor:pointer; text-align:center;">
+          TERMINAL</button>
+        <button id="term-tab-catalog" type="button" role="tab" data-i18n="terminal.tab_stock" style="flex:1; padding:8px 10px; background:#0a381a; color:#00ff66; border:none; border-right:1px solid #14592b; font-family:var(--mono); font-weight:bold; font-size:11px; cursor:pointer; text-align:center; text-shadow:0 0 5px rgba(0,255,102,0.5);">
+          ESTOQUE</button>
+        <button id="term-tab-credits" type="button" role="tab" data-i18n="terminal.tab_credits" style="flex:1; padding:8px 10px; background:#031308; color:#18803c; border:none; font-family:var(--mono); font-weight:bold; font-size:11px; cursor:pointer; text-align:center;">
+          CRÉDITOS</button>
+        <button id="term-tab-ach" type="button" role="tab" data-i18n="terminal.tab_achievements" style="flex:1; padding:8px 10px; background:#031308; color:#18803c; border:none; border-left:1px solid #14592b; font-family:var(--mono); font-weight:bold; font-size:11px; cursor:pointer; text-align:center;">
+          CONQUISTAS</button>
+      </div>
+
+      <!-- ABA 1: GERENCIAR CANAL & ESTOQUE -->
+      <div id="term-panel-catalog" role="tabpanel" style="position:relative; z-index:6; padding:14px; overflow-y:auto; flex:1; font-size:11px; line-height:1.45; scrollbar-width:thin; scrollbar-color:#00ff66 #020904; display:flex; flex-direction:column;">
+        <div style="color:#00ff66; margin-bottom:6px;" data-i18n="ui.term.connected">● TERMINAL CONECTADO [COM1: 9600 BAUD]</div>
+        <div id="term-info" style="margin-bottom:10px; color:#fff;"><span data-i18n="ui.term.current_channel">CANAL ATUAL:</span> <span id="term-handle" style="color:#00ff66; font-weight:bold;">@canal</span> · <span data-i18n="ui.term.collection">ACERVO:</span> <span id="term-count" style="color:#ffd700; font-weight:bold;">0</span> <span data-i18n="ui.term.tapes">fitas</span></div>
+        <div style="border-top:1px dashed #14592b; margin:10px 0;"></div>
+        <div style="margin-bottom:6px; font-weight:bold; color:#00ff66;" data-i18n="ui.term.load_title">CARREGAR NOVO CANAL / PLAYLIST:</div>
+        <div style="display:flex; gap:6px;">
+          <input type="text" id="term-feed" aria-label="Canal ou playlist" data-i18n-aria="ui.term.feed_aria" data-i18n-attr="placeholder:ui.term.feed_placeholder" placeholder="ID de canal (UC...), @handle ou Playlist..." style="flex:1; background:#020a05; color:#00ff66; border:1px solid #14592b; padding:6px 8px; font-family:var(--mono); font-size:12px; outline:none;">
+          <button id="term-btn-load" type="button" data-i18n="terminal.search" style="background:#0a381a; color:#00ff66; border:1px solid #00ff66; padding:6px 14px; font-weight:bold; font-family:var(--mono); cursor:pointer;">BUSCAR</button>
+        </div>
+        <div id="term-status" style="margin-top:6px; font-size:11px; min-height:16px; color:#ffd700;"></div>
+        <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+          <button id="term-btn-cache" type="button" data-i18n="terminal.clear_cache" style="background:#020904; color:#1da84c; border:1px solid #14592b; padding:3px 10px; font-weight:bold; font-family:var(--mono); font-size:10.5px; cursor:pointer;">LIMPAR CACHE</button>
+          <span id="term-cache-status" style="font-size:10.5px; color:#1da84c;"></span>
+        </div>
+        <div style="border-top:1px dashed #14592b; margin:10px 0;"></div>
+        <div style="font-weight:bold; color:#00ff66; margin-bottom:4px;" data-i18n="ui.term.inventory">INVENTÁRIO DAS FITAS NA PRATELEIRA:</div>
+        <div id="term-list" style="flex:1; overflow-y:auto; background:#020a05; border:1px solid #14592b; padding:6px; font-size:11px; scrollbar-width:thin; scrollbar-color:#00ff66 #020904;"></div>
+      </div>
+
+      <!-- ABA 1: PROMPT DE COMANDO / TERMINAL -->
+      <div id="term-panel-cli" role="tabpanel" style="display:none; position:relative; z-index:6; padding:12px 14px; overflow-y:auto; flex:1; font-size:11.5px; line-height:1.45; scrollbar-width:thin; scrollbar-color:#00ff66 #020904; background:#010603; font-family:var(--mono);">
+        <div id="term-cli-history" style="white-space:pre-wrap; word-break:break-all; margin-bottom:8px;"></div>
+        <div id="term-cli-line" style="display:flex; align-items:center; gap:6px;">
+          <span style="color:#00ff66; font-weight:bold; text-shadow:0 0 5px #00ff66;" data-i18n="ui.term.prompt">C:\LOCADORA&gt;</span>
+          <input type="text" id="term-cli-input" aria-label="Linha de comando" data-i18n-aria="ui.term.cli_aria" data-i18n-attr="placeholder:ui.term.cli_placeholder" autocomplete="off" spellcheck="false" style="flex:1; background:transparent; border:none; outline:none; color:#22ff77; font-family:var(--mono); font-size:12px; font-weight:bold; caret-color:#00ff66; padding:0; margin:0;" placeholder="digite aqui...">
+        </div>
+      </div>
+
+      <!-- ABA 3: CRÉDITOS (canal, fliperama e modelos 3D) -->
+      <div id="term-panel-ach" role="tabpanel" style="display:none; position:relative; z-index:6; padding:14px; overflow-y:auto; flex:1; font-size:11.5px; line-height:1.45; scrollbar-width:thin; scrollbar-color:#00ff66 #020904;"></div>
+
+      <div id="term-panel-credits" role="tabpanel" style="display:none; position:relative; z-index:6; padding:14px; overflow-y:auto; flex:1; font-size:11px; line-height:1.45; scrollbar-width:thin; scrollbar-color:#00ff66 #020904;">
+        <div id="term-credits-dynamic"></div>
+        <div style="background:rgba(0,255,102,0.06); border:1px solid #14592b; padding:8px 10px; margin-bottom:12px;">
+          <div style="color:#00ff66; font-weight:bold; margin-bottom:3px; text-shadow:0 0 4px #00ff66;" data-i18n="ui.credits.manifest">★ MANIFESTO DE HARDWARE & MODELOS 3D (LOW-POLY)</div>
+          <div style="color:#1da84c; font-size:10px;" data-i18n="ui.credits.intro">Todos os modelos 3D utilizados neste ambiente foram integrados sob suas respectivas licenças Creative Commons (CC-BY 3.0 / CC-BY 4.0):</div>
+        </div>
+
+        <div style="border:1px solid #14592b; background:#020a05; padding:8px 10px; margin-bottom:8px; border-left:4px solid #00ff66;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span style="color:#fff; font-weight:bold;">[01] <span data-i18n="ui.credits.computer">COMPUTADOR DO CAIXA</span> (Gateway 2000 PC)</span>
+            <span style="background:#093b1b; color:#00ff66; padding:1px 6px; font-size:10px; border:1px solid #00ff66;">CC-BY 3.0</span>
+          </div>
+          <div style="color:#22ff77;">• <b data-i18n="ui.credits.author">Autor:</b> Charlie (creatureframe / https://creatureframe.com/)</div>
+          <div style="color:#1ba84b; font-size:10px; margin-bottom:3px;">• <b data-i18n="ui.credits.use">Uso:</b> <span data-i18n="ui.credits.computer_use">Terminal interativo do balcão</span></div>
+          <div style="font-size:10px;">• <b data-i18n="ui.credits.source">Fonte:</b> <a href="https://poly.pizza/m/Bw55oYsbp8" target="_blank" rel="noopener" style="color:#00ff66; text-decoration:underline;">https://poly.pizza/m/Bw55oYsbp8</a></div>
+        </div>
+
+        <div style="border:1px solid #14592b; background:#020a05; padding:8px 10px; margin-bottom:8px; border-left:4px solid #00ff66;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span style="color:#fff; font-weight:bold;">[02] <span data-i18n="ui.credits.tv">TELEVISÃO RETRÔ CRT</span> (Old TV Off)</span>
+            <span style="background:#093b1b; color:#00ff66; padding:1px 6px; font-size:10px; border:1px solid #00ff66;">CC-BY 3.0</span>
+          </div>
+          <div style="color:#22ff77;">• <b data-i18n="ui.credits.author">Autor:</b> Justin Randall</div>
+          <div style="color:#1ba84b; font-size:10px; margin-bottom:3px;">• <b data-i18n="ui.credits.use">Uso:</b> <span data-i18n="ui.credits.tv_use">TV retrô clássica sobre o balcão</span></div>
+          <div style="font-size:10px;">• <b data-i18n="ui.credits.source">Fonte:</b> <a href="https://poly.pizza/m/5XSU6cgF3BP" target="_blank" rel="noopener" style="color:#00ff66; text-decoration:underline;">https://poly.pizza/m/5XSU6cgF3BP</a></div>
+        </div>
+
+        <div style="border:1px solid #14592b; background:#020a05; padding:8px 10px; margin-bottom:8px; border-left:4px solid #00ff66;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span style="color:#fff; font-weight:bold;">[03] <span data-i18n="ui.credits.vcr">VIDEOCASSETE VCR (Deck Topo da TV)</span></span>
+            <span style="background:#093b1b; color:#00ff66; padding:1px 6px; font-size:10px; border:1px solid #00ff66;">PROCEDURAL</span>
+          </div>
+          <div style="color:#22ff77;">• <b data-i18n="ui.credits.author">Autor:</b> Net Video Rental 2000</div>
+          <div style="color:#1ba84b; font-size:10px; margin-bottom:3px;">• <b data-i18n="ui.credits.use">Uso:</b> <span data-i18n="ui.credits.vcr_use">Deck VCR low-poly</span></div>
+          <div style="font-size:10px;">• <b data-i18n="ui.credits.source">Fonte:</b> <span data-i18n="ui.credits.procedural_source">Modelagem procedural nativa Three.js</span></div>
+        </div>
+
+        <div style="border:1px solid #14592b; background:#020a05; padding:8px 10px; margin-bottom:8px; border-left:4px solid #00ff66;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span style="color:#fff; font-weight:bold;">[04] <span data-i18n="ui.credits.tape">CASSETE FITA VHS</span></span>
+            <span style="background:#093b1b; color:#00ff66; padding:1px 6px; font-size:10px; border:1px solid #00ff66;">CC-BY 3.0</span>
+          </div>
+          <div style="color:#22ff77;">• <b data-i18n="ui.credits.author">Autor:</b> S. Paul Michael</div>
+          <div style="color:#1ba84b; font-size:10px; margin-bottom:3px;">• <b data-i18n="ui.credits.use">Uso:</b> <span data-i18n="ui.credits.tape_use">Fitas nas prateleiras</span></div>
+          <div style="font-size:10px;">• <b data-i18n="ui.credits.source">Fonte:</b> <a href="https://poly.pizza/m/a4DA6H7Z6b8" target="_blank" rel="noopener" style="color:#00ff66; text-decoration:underline;">https://poly.pizza/m/a4DA6H7Z6b8</a></div>
+        </div>
+
+        <div style="border:1px solid #14592b; background:#020a05; padding:8px 10px; margin-bottom:8px; border-left:4px solid #00ff66;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span style="color:#fff; font-weight:bold;">[05] <span data-i18n="ui.credits.vending">MÁQUINA DE REFRIGERANTE</span> (Vending Machine)</span>
+            <span style="background:#093b1b; color:#00ff66; padding:1px 6px; font-size:10px; border:1px solid #00ff66;">CC-BY 3.0</span>
+          </div>
+          <div style="color:#22ff77;">• <b data-i18n="ui.credits.author">Autor:</b> dook</div>
+          <div style="color:#1ba84b; font-size:10px; margin-bottom:3px;">• <b data-i18n="ui.credits.use">Uso:</b> <span data-i18n="ui.credits.vending_use">Vending machine clássica iluminada</span></div>
+          <div style="font-size:10px;">• <b data-i18n="ui.credits.source">Fonte:</b> <a href="https://poly.pizza/m/yNG4vqWVq0" target="_blank" rel="noopener" style="color:#00ff66; text-decoration:underline;">https://poly.pizza/m/yNG4vqWVq0</a></div>
+        </div>
+
+        <div style="border:1px solid #14592b; background:#020a05; padding:8px 10px; margin-bottom:8px; border-left:4px solid #00ff66;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span style="color:#fff; font-weight:bold;">[06] <span data-i18n="ui.credits.can">LATA DE REFRIGERANTE</span> (Soda Can)</span>
+            <span style="background:#093b1b; color:#00ff66; padding:1px 6px; font-size:10px; border:1px solid #00ff66;">CC-BY 3.0</span>
+          </div>
+          <div style="color:#22ff77;">• <b data-i18n="ui.credits.author">Autor:</b> jeremy</div>
+          <div style="color:#1ba84b; font-size:10px; margin-bottom:3px;">• <b data-i18n="ui.credits.use">Uso:</b> <span data-i18n="ui.credits.can_use">Lata consumível</span></div>
+          <div style="font-size:10px;">• <b data-i18n="ui.credits.source">Fonte:</b> <a href="https://poly.pizza/m/cNjAaDY27fQ" target="_blank" rel="noopener" style="color:#00ff66; text-decoration:underline;">https://poly.pizza/m/cNjAaDY27fQ</a></div>
+        </div>
+
+        <div style="border:1px solid #14592b; background:#020a05; padding:8px 10px; margin-bottom:8px; border-left:4px solid #00ff66;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span style="color:#fff; font-weight:bold;">[07] <span data-i18n="ui.credits.fan">VENTILADOR DE MESA OSCILANTE</span></span>
+            <span style="background:#093b1b; color:#00ff66; padding:1px 6px; font-size:10px; border:1px solid #00ff66;">CC-BY 3.0</span>
+          </div>
+          <div style="color:#22ff77;">• <b data-i18n="ui.credits.author">Autor:</b> J-Toastie</div>
+          <div style="color:#1ba84b; font-size:10px; margin-bottom:3px;">• <b data-i18n="ui.credits.use">Uso:</b> <span data-i18n="ui.credits.fan_use">Ventilador animado</span></div>
+          <div style="font-size:10px;">• <b data-i18n="ui.credits.source">Fonte:</b> <a href="https://poly.pizza/m/dPExITRhhZ" target="_blank" rel="noopener" style="color:#00ff66; text-decoration:underline;">https://poly.pizza/m/dPExITRhhZ</a></div>
+        </div>
+
+        <div style="border:1px solid #14592b; background:#020a05; padding:8px 10px; margin-bottom:8px; border-left:4px solid #00ff66;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span style="color:#fff; font-weight:bold;">[08] <span data-i18n="ui.credits.car">JEEP (Exterior)</span></span>
+            <span style="background:#093b1b; color:#00ff66; padding:1px 6px; font-size:10px; border:1px solid #00ff66;">CC-BY 3.0</span>
+          </div>
+          <div style="color:#22ff77;">• <b data-i18n="ui.credits.author">Autor:</b> Alex Safayan</div>
+          <div style="color:#1ba84b; font-size:10px; margin-bottom:3px;">• <b data-i18n="ui.credits.use">Uso:</b> <span data-i18n="ui.credits.car_use">Jeep estacionado no exterior</span></div>
+          <div style="font-size:10px;">• <b data-i18n="ui.credits.source">Fonte:</b> <a href="https://poly.pizza/m/4gOfX6DR4yG" target="_blank" rel="noopener" style="color:#00ff66; text-decoration:underline;">https://poly.pizza/m/4gOfX6DR4yG</a></div>
+        </div>
+
+        <div style="border:1px solid #14592b; background:#020a05; padding:8px 10px; margin-bottom:8px; border-left:4px solid #00ff66;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span style="color:#fff; font-weight:bold;">[09] <span data-i18n="ui.credits.arcade">FLIPERAMA CLÁSSICO</span> (Arcade Machine)</span>
+            <span style="background:#093b1b; color:#00ff66; padding:1px 6px; font-size:10px; border:1px solid #00ff66;">CC-BY 3.0</span>
+          </div>
+          <div style="color:#22ff77;">• <b data-i18n="ui.credits.author">Autor:</b> J-Toastie</div>
+          <div style="color:#1ba84b; font-size:10px; margin-bottom:3px;">• <b data-i18n="ui.credits.use">Uso:</b> <span data-i18n="ui.credits.arcade_use">Gabinete de fliperama</span></div>
+          <div style="font-size:10px;">• <b data-i18n="ui.credits.source">Fonte:</b> <a href="https://poly.pizza/m/GLDkMhiynM" target="_blank" rel="noopener" style="color:#00ff66; text-decoration:underline;">https://poly.pizza/m/GLDkMhiynM</a></div>
+        </div>
+
+        <div style="border:1px solid #14592b; background:#020a05; padding:8px 10px; margin-bottom:8px; border-left:4px solid #00ff66;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span style="color:#fff; font-weight:bold;">[10] <span data-i18n="ui.credits.boxes">CAIXAS DE PAPELÃO</span> (Cardboard Boxes)</span>
+            <span style="background:#093b1b; color:#00ff66; padding:1px 6px; font-size:10px; border:1px solid #00ff66;">CC0 1.0</span>
+          </div>
+          <div style="color:#22ff77;">• <b data-i18n="ui.credits.author">Autor:</b> Quaternius</div>
+          <div style="color:#1ba84b; font-size:10px; margin-bottom:3px;">• <b data-i18n="ui.credits.use">Uso:</b> <span data-i18n="ui.credits.boxes_use">Caixas da prateleira de baixo</span></div>
+          <div style="font-size:10px;">• <b data-i18n="ui.credits.source">Fonte:</b> <a href="https://poly.pizza/m/bs6ikOeTrR" target="_blank" rel="noopener" style="color:#00ff66; text-decoration:underline;">https://poly.pizza/m/bs6ikOeTrR</a></div>
+        </div>
+
+        <div style="border:1px solid #14592b; background:#020a05; padding:8px 10px; margin-bottom:8px; border-left:4px solid #00ff66;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span style="color:#fff; font-weight:bold;">[11] <span data-i18n="ui.credits.turkey">FRANGO ASSADO</span> (Turkey)</span>
+            <span style="background:#093b1b; color:#00ff66; padding:1px 6px; font-size:10px; border:1px solid #00ff66;">CC0 1.0</span>
+          </div>
+          <div style="color:#22ff77;">• <b data-i18n="ui.credits.author">Autor:</b> Kenney (Low Poly Food &amp; Drink)</div>
+          <div style="color:#1ba84b; font-size:10px; margin-bottom:3px;">• <b data-i18n="ui.credits.use">Uso:</b> <span data-i18n="ui.credits.turkey_use">Segredo da lixeira</span></div>
+          <div style="font-size:10px;">• <b data-i18n="ui.credits.source">Fonte:</b> <a href="https://poly.pizza/m/oFnmWN5dCb" target="_blank" rel="noopener" style="color:#00ff66; text-decoration:underline;">https://poly.pizza/m/oFnmWN5dCb</a></div>
+        </div>
+        <div id="term-credits-secret"></div>
+
+        <!-- Easter egg do porquinho (entities/Pig.js, entities/Cardboard.js): no FIM da lista -->
+        <div style="border:1px solid #14592b; background:#020a05; padding:8px 10px; margin-bottom:8px; border-left:4px solid #00ff66;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span style="color:#fff; font-weight:bold;">[12] <span data-i18n="ui.credits.pig">PORQUINHO</span> (Piggy bank)</span>
+            <span style="background:#093b1b; color:#00ff66; padding:1px 6px; font-size:10px; border:1px solid #00ff66;">CC-BY 3.0</span>
+          </div>
+          <div style="color:#22ff77;">• <b data-i18n="ui.credits.author">Autor:</b> Poly by Google</div>
+          <div style="color:#1ba84b; font-size:10px; margin-bottom:3px;">• <b data-i18n="ui.credits.use">Uso:</b> <span data-i18n="ui.credits.pig_use">Porquinho do estacionamento</span></div>
+          <div style="font-size:10px;">• <b data-i18n="ui.credits.source">Fonte:</b> <a href="https://poly.pizza/m/dpvS2kdW6I9" target="_blank" rel="noopener" style="color:#00ff66; text-decoration:underline;">https://poly.pizza/m/dpvS2kdW6I9</a></div>
+        </div>
+
+        <div style="border:1px solid #14592b; background:#020a05; padding:8px 10px; margin-bottom:8px; border-left:4px solid #00ff66;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span style="color:#fff; font-weight:bold;">[13] <span data-i18n="ui.credits.coin">MOEDA</span> (Coin)</span>
+            <span style="background:#093b1b; color:#00ff66; padding:1px 6px; font-size:10px; border:1px solid #00ff66;">CC0 1.0</span>
+          </div>
+          <div style="color:#22ff77;">• <b data-i18n="ui.credits.author">Autor:</b> Quaternius</div>
+          <div style="color:#1ba84b; font-size:10px; margin-bottom:3px;">• <b data-i18n="ui.credits.use">Uso:</b> <span data-i18n="ui.credits.coin_use">Moedas da caixa de reciclagem</span></div>
+          <div style="font-size:10px;">• <b data-i18n="ui.credits.source">Fonte:</b> <a href="https://poly.pizza/m/QHZtj94fvh" target="_blank" rel="noopener" style="color:#00ff66; text-decoration:underline;">https://poly.pizza/m/QHZtj94fvh</a></div>
+        </div>
+
+        <!-- Armario (entities/Cabinet.js): no FIM da lista -->
+        <div style="border:1px solid #14592b; background:#020a05; padding:8px 10px; margin-bottom:8px; border-left:4px solid #00ff66;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span style="color:#fff; font-weight:bold;">[14] <span data-i18n="ui.credits.padlock">CADEADO</span> (Simple Padlock)</span>
+            <span style="background:#093b1b; color:#00ff66; padding:1px 6px; font-size:10px; border:1px solid #00ff66;">CC-BY 3.0</span>
+          </div>
+          <div style="color:#22ff77;">• <b data-i18n="ui.credits.author">Autor:</b> Garrett LeFever</div>
+          <div style="color:#1ba84b; font-size:10px; margin-bottom:3px;">• <b data-i18n="ui.credits.use">Uso:</b> <span data-i18n="ui.credits.padlock_use">Cadeado do armário</span></div>
+          <div style="font-size:10px;">• <b data-i18n="ui.credits.source">Fonte:</b> <a href="https://poly.pizza/m/daVwcF4sXmE" target="_blank" rel="noopener" style="color:#00ff66; text-decoration:underline;">https://poly.pizza/m/daVwcF4sXmE</a></div>
+        </div>
+
+        <div style="border:1px solid #14592b; background:#020a05; padding:8px 10px; margin-bottom:8px; border-left:4px solid #00ff66;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span style="color:#fff; font-weight:bold;">[15] <span data-i18n="ui.credits.key">CHAVE</span> (Key)</span>
+            <span style="background:#093b1b; color:#00ff66; padding:1px 6px; font-size:10px; border:1px solid #00ff66;">CC0 1.0</span>
+          </div>
+          <div style="color:#22ff77;">• <b data-i18n="ui.credits.author">Autor:</b> Quaternius</div>
+          <div style="color:#1ba84b; font-size:10px; margin-bottom:3px;">• <b data-i18n="ui.credits.use">Uso:</b> <span data-i18n="ui.credits.key_use">Chave do armário</span></div>
+          <div style="font-size:10px;">• <b data-i18n="ui.credits.source">Fonte:</b> <a href="https://poly.pizza/m/bg6e1lfNsO" target="_blank" rel="noopener" style="color:#00ff66; text-decoration:underline;">https://poly.pizza/m/bg6e1lfNsO</a></div>
+        </div>
+      </div>
+
+      <!-- Rodapé do Terminal -->
+      <div style="position:relative; z-index:6; border-top:1px solid #14592b; background:#020904; padding:8px 12px; display:flex; justify-content:space-between; align-items:center; font-size:10px; color:#1da84c;">
+        <span data-i18n="ui.term.footer">[ESC] FECHAR TERMINAL · CLIQUE NAS ABAS PARA TROCAR DE TELA</span>
+        <button id="term-exit" type="button" data-i18n="terminal.back" style="background:#0a381a; color:#00ff66; border:1px solid #00ff66; padding:4px 14px; font-family:var(--mono); font-size:11px; cursor:pointer; font-weight:bold;">VOLTAR [ESC]</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL RETRÔ: COMPARTILHAR / INDIQUE UM AMIGO -->
+  <div id="share-modal" role="dialog" aria-modal="true" aria-label="Compartilhar link" data-i18n-aria="ui.share.aria" style="display:none; position:fixed; inset:0; z-index:95; background:rgba(2, 6, 12, 0.85); backdrop-filter:blur(3px); align-items:center; justify-content:center; padding:12px; font-family:var(--mono);">
+    <div style="width:100%; max-width:680px; background:#040d07; border:2px solid #00ff66; box-shadow:0 0 25px rgba(0,255,102,0.3), inset 0 0 15px rgba(0,255,102,0.1); display:flex; flex-direction:column; overflow:hidden; border-radius:4px;">
+      
+      <!-- Cabeçalho do Cartão de Sócio -->
+      <div style="background:#093b1b; padding:10px 14px; border-bottom:1px solid #00ff66; display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:18px;">📼</span>
+          <span style="color:#00ff66; font-weight:900; letter-spacing:1px; font-size:14px; text-shadow:0 0 8px rgba(0,255,102,0.6);" data-i18n="ui.share.title">CLUBE DA LOCADORA · COMPARTILHAR LINK</span>
+        </div>
+        <button id="share-modal-close" type="button" aria-label="Fechar" data-i18n-aria="aria.close" style="background:#020a05; color:#00ff66; border:1px solid #00ff66; padding:2px 8px; font-family:var(--mono); cursor:pointer; font-weight:bold; font-size:12px;">[X]</button>
+      </div>
+
+      <!-- Conteúdo Principal -->
+      <div style="padding:16px; display:flex; gap:20px; flex-wrap:wrap; align-items:center;">
+        
+        <!-- Bloco Esquerdo: QR Code -->
+        <div style="flex:0 0 auto; display:flex; flex-direction:column; align-items:center; background:#020904; border:1px solid #14592b; padding:12px; border-radius:4px;">
+          <div id="share-modal-qr" role="img" aria-label="QR code do link" data-i18n-aria="ui.share.qr_aria" style="background:#fff; padding:8px; border-radius:2px; display:flex; align-items:center; justify-content:center; min-width:180px; min-height:180px;"></div>
+          <div style="color:#00ff66; font-size:10px; font-weight:bold; margin-top:8px; text-align:center;" data-i18n="ui.share.scan">ESCANEIE COM O CELULAR</div>
+          <div style="color:#1da84c; font-size:9px; text-align:center; max-width:180px; margin-top:2px;" data-i18n="ui.share.scan_hint">Aponte a câmera para abrir direto na locadora</div>
+        </div>
+
+        <!-- Bloco Direito: Link, Canal e Botões Sociais -->
+        <div style="flex:1 1 280px; display:flex; flex-direction:column; gap:10px;">
+          <div>
+            <div style="color:#ffd700; font-size:11px; font-weight:bold; margin-bottom:4px;" data-i18n="ui.share.invite_title">★ CONVIDE SEUS AMIGOS ★</div>
+            <div style="color:#fff; font-size:12px; line-height:1.4;"><span data-i18n="ui.share.invite_pre">Compartilhe este link para que seus amigos possam explorar a locadora 3D e assistir às fitas do canal</span> <b id="share-channel-name" style="color:#00ff66;">@canal</b><span data-i18n="ui.share.invite_post">!</span></div>
+          </div>
+
+          <!-- Campo de URL com Botão Copiar -->
+          <div>
+            <div style="color:#1da84c; font-size:10px; margin-bottom:3px;" data-i18n="ui.share.link_label">LINK DIRETO DA LOCADORA:</div>
+            <div style="display:flex; gap:6px;">
+              <input type="text" id="share-url-input" readonly style="flex:1; background:#020a05; color:#00ff66; border:1px solid #14592b; padding:8px 10px; font-family:var(--mono); font-size:11px; outline:none; text-overflow:ellipsis;">
+              <button id="share-btn-copy" type="button" data-i18n="share.copy" style="background:#0a381a; color:#00ff66; border:1px solid #00ff66; padding:8px 14px; font-weight:bold; font-family:var(--mono); cursor:pointer; white-space:nowrap; transition:all .2s;">COPIAR</button>
+            </div>
+            <div id="share-copy-msg" style="color:#00ff66; font-size:10px; margin-top:4px; min-height:14px; display:none;" data-i18n="ui.share.copied_msg">✓ Copiado para a área de transferência!</div>
+          </div>
+
+          <!-- Botões de Compartilhamento Rápido -->
+          <div>
+            <div style="color:#1da84c; font-size:10px; margin-bottom:6px;" data-i18n="ui.share.send">ENVIAR DIRETAMENTE:</div>
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+              <button id="share-btn-whatsapp" style="background:#075e54; color:#fff; border:1px solid #25d366; padding:6px 10px; font-family:var(--mono); font-size:11px; cursor:pointer; font-weight:bold; border-radius:2px; display:flex; align-items:center; gap:4px;">
+                <span>💬</span> WhatsApp
+              </button>
+              <button id="share-btn-telegram" style="background:#004e75; color:#fff; border:1px solid #0088cc; padding:6px 10px; font-family:var(--mono); font-size:11px; cursor:pointer; font-weight:bold; border-radius:2px; display:flex; align-items:center; gap:4px;">
+                <span>✈️</span> Telegram
+              </button>
+              <button id="share-btn-twitter" style="background:#111; color:#fff; border:1px solid #555; padding:6px 10px; font-family:var(--mono); font-size:11px; cursor:pointer; font-weight:bold; border-radius:2px; display:flex; align-items:center; gap:4px;">
+                <span>✖</span> X (Twitter)
+              </button>
+              <button id="share-btn-native" style="display:none; background:#1b3820; color:#00ff66; border:1px solid #00ff66; padding:6px 10px; font-family:var(--mono); font-size:11px; cursor:pointer; font-weight:bold; border-radius:2px;">
+                <span>🔗</span> <span data-i18n="ui.share.more">Mais Opções</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Rodapé com Cartão VIP -->
+      <div style="border-top:1px solid #14592b; background:#020904; padding:8px 14px; display:flex; justify-content:space-between; align-items:center; font-size:10px; color:#1da84c;">
+        <span data-i18n="share.card">CARTÃO DE SÓCIO VIP Nº 2000-NET-VIDEO</span>
+        <button id="share-modal-exit" type="button" data-i18n="share.close" style="background:#0a381a; color:#00ff66; border:1px solid #00ff66; padding:4px 12px; font-family:var(--mono); font-size:11px; cursor:pointer; font-weight:bold;">FECHAR [ESC]</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal de Saída da Porta Trancada (Retorno à Tela Inicial) -->
+  <div id="door-modal" role="alertdialog" aria-modal="true" aria-label="Porta trancada" data-i18n-aria="ui.door.aria" style="display:none; position:fixed; inset:0; z-index:92; align-items:center; justify-content:center; background:rgba(0,0,0,0.85); backdrop-filter:blur(3px); padding:16px;">
+    <div id="door-card" style="position:relative; width:min(500px, 94vw); display:flex; flex-direction:column; background:#140707; border:2px solid #ff4444; box-shadow:0 0 32px rgba(255,68,68,0.45), inset 0 0 15px rgba(255,68,68,0.18); color:#fff; font-family:var(--mono); overflow:hidden;">
+      
+      <!-- Scanlines CRT -->
+      <div style="position:absolute; inset:0; pointer-events:none; background:repeating-linear-gradient(to bottom, rgba(255,68,68,0.035) 0 1px, transparent 1px 3px); z-index:5;"></div>
+
+      <!-- Barra de Título Retrô -->
+      <div class="win95-titlebar" style="position:relative; z-index:6; background:#360a0a; color:#ff6666; padding:8px 12px; font-weight:bold; font-size:12px; display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #ff4444; text-shadow:0 0 6px rgba(255,68,68,0.6);">
+        <span data-i18n="ui.door.titlebar">🔒 PORTA TRANCADA · SISTEMA DE SEGURANÇA</span>
+        <button id="door-modal-close" type="button" aria-label="Fechar" data-i18n-aria="aria.close" style="cursor:pointer; background:#150505; color:#ff6666; border:1px solid #ff4444; padding:3px 8px; font-family:var(--mono); font-weight:bold; font-size:11px;">[X]</button>
+      </div>
+
+      <!-- Conteúdo do Modal -->
+      <div style="position:relative; z-index:6; padding:18px; display:flex; flex-direction:column; gap:12px;">
+        <div style="display:flex; gap:14px; align-items:center;">
+          <div style="font-size:36px; line-height:1;">🚪</div>
+          <div>
+            <div style="color:#ffd700; font-weight:bold; font-size:13px; margin-bottom:4px;" data-i18n="ui.door.headline">A PORTA ESTÁ TRANCADA COM CHAVE!</div>
+            <div style="color:#ddd; font-size:11px; line-height:1.45;" data-i18n="ui.door.body">Você forçou a maçaneta 3 vezes. A locadora está trancada por fora para o turno da noite.</div>
+          </div>
+        </div>
+
+        <div style="background:rgba(255,68,68,0.08); border:1px dashed #ff4444; padding:10px 12px; color:#ffb0b0; font-size:11px; line-height:1.45;" data-i18n-html="ui.door.question">
+          Deseja abrir a trava de emergência e <b>retornar para a Tela Inicial</b> (fachada externa da locadora)?
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:6px; flex-wrap:wrap;">
+          <button id="door-btn-leave" type="button" data-i18n="door.leave" style="flex:1 1 180px; background:#6b1515; color:#fff; border:2px solid #ff4444; padding:10px 14px; font-family:var(--mono); font-weight:bold; font-size:12px; cursor:pointer; text-align:center; box-shadow:0 0 10px rgba(255,68,68,0.3); transition:all .2s;">
+            🚪 SIM, VOLTAR AO INÍCIO [E]
+          </button>
+          <button id="door-btn-stay" type="button" data-i18n="door.stay" style="flex:1 1 140px; background:#1a1a1a; color:#ccc; border:1px solid #666; padding:10px 14px; font-family:var(--mono); font-weight:bold; font-size:11px; cursor:pointer; text-align:center;">
+            CONTINUAR NA LOJA [ESC]
+          </button>
+        </div>
+      </div>
+
+      <!-- Rodapé -->
+      <div style="position:relative; z-index:6; border-top:1px solid #4a1515; background:#0d0404; padding:6px 14px; font-size:9.5px; color:#994444; display:flex; justify-content:space-between;">
+        <span>RENTAL-OS SECURITY PROTOCOL · LOCK 96</span>
+        <span data-i18n="ui.door.esc">[ESC] FECHAR</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Contador de Sobrecarga da Campainha (Easter Egg 15x-25x) -->
+  <div id="bell-counter" role="status" aria-live="polite">
+    <div id="bell-counter-title" data-i18n="ui.bell.title">ALERTA DE PRESSÃO NO BALCÃO</div>
+    <div id="bell-counter-num">15 / 25</div>
+    <div id="bell-counter-msg"></div>
+  </div>
+
+  <!-- Flash da Explosão da Porta -->
+  <div id="sight-flash" aria-hidden="true"></div>
+  <div id="screen-flash" aria-hidden="true" style="display:none; position:fixed; inset:0; z-index:99; pointer-events:none; background:radial-gradient(circle, #ffffff 15%, #ff5500 70%, transparent 100%); opacity:0; transition:opacity 0.08s ease-in;"></div>
+
+  <!-- Overlay de Blur Onírico da Rota Secreta do Herói -->
+  <div id="hero-blur-overlay" aria-hidden="true" style="display:none; position:fixed; inset:0; z-index:97; pointer-events:none; backdrop-filter:blur(0px); background:rgba(255, 235, 120, 0); opacity:0; transition:opacity 1.2s ease-in-out, backdrop-filter 1.2s ease-in-out;"></div>
+
+  <div id="fade" aria-hidden="true" style="position:fixed;inset:0;z-index:999;pointer-events:none;background:#000;opacity:0;"></div>
+
+    <!-- i18n: traduz o HTML estatico e monta o seletor de idioma antes do jogo (src/i18n/boot.js) -->
+    <script type="module">
+      import { initI18nUI } from './src/i18n/boot.js';
+      initI18nUI();
+    </script>
+    <!-- Módulo Principal -->
+    <script type="module" src="src/main.js"></script>
+</body>
+
+</html>

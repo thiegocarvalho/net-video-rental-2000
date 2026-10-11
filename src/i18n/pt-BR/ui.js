@@ -1,0 +1,186 @@
+// Idioma-fonte (pt-BR), namespace ui: HTML estático (index.html) e interface. Toda chave nova nasce aqui; os demais dicionários seguem este.
+// Chaves planas, agrupadas por prefixo. Placeholders: {nome}.
+// Sem HTML nos valores, EXCETO nas chaves usadas por data-i18n-html (marcadas abaixo): só b, i, em, strong, small, br e span[class].
+export default {
+  'gta.exit': '✕ LEVANTAR DO COMPUTADOR',
+  'hud.sound_on': 'SOM: LIGADO',
+  'deck.name': 'Videocassete VX-9000',
+  'deck.desc': '4 cabeças · Hi-Fi · Tracking automático',
+  'deck.tracking': 'TRACKING',
+  'deck.keys': '[W] Play/Pausa · [A] Rebobina · [D] Avança · [E] Ejeta · [S] Levantar',
+  'boot.title': '<small>Bem-vindo à</small><br>Net Video Rental 2000',
+  'boot.subtitle': 'Cole o link do canal ou da playlist',
+  'boot.enter': 'Entrar',
+  'terminal.tab_cli': 'TERMINAL',
+  'terminal.tab_stock': 'ESTOQUE',
+  'terminal.tab_credits': 'CRÉDITOS',
+  'terminal.tab_achievements': 'CONQUISTAS',
+  'terminal.search': 'BUSCAR',
+  'terminal.clear_cache': 'LIMPAR CACHE',
+  'terminal.back': 'VOLTAR [ESC]',
+  'share.copy': 'COPIAR',
+  'share.card': 'CARTÃO DE SÓCIO VIP Nº 2000-NET-VIDEO',
+  'share.close': 'FECHAR [ESC]',
+  'door.leave': '🚪 SIM, VOLTAR AO INÍCIO [E]',
+  'door.stay': 'CONTINUAR NA LOJA [ESC]',
+
+  // Exemplos de uso (interpolação e plural)
+  'toast.pickup': 'Pegou: {name}',
+  'inventory.count.one': '{n} fita na estante',
+  'inventory.count.other': '{n} fitas na estante',
+  'aria.close': 'Fechar',
+
+  // <head>: descrição e cartões de compartilhamento (o nome do jogo não traduz)
+  'ui.meta.description': 'Visite uma autêntica locadora de fitas VHS dos anos 90 totalmente em 3D no navegador! Escolha fitas do seu canal favorito do YouTube, coloque no videocassete e assista na TV CRT com som retrô!',
+  'ui.meta.og_title': 'Net Video Rental 2000 · Locadora Retrô de Fitas VHS em 3D',
+  'ui.meta.og_description': 'Visite uma locadora dos anos 90 em 3D no navegador. Coloque fitas do seu canal favorito no videocassete e assista na TV CRT de tubo com som retrô!',
+  'ui.meta.og_image_alt': 'Net Video Rental 2000 — Locadora Retrô 3D de Fitas VHS no Navegador',
+
+  // Seletor de idioma (src/i18n/boot.js). Os nomes dos idiomas não traduzem (LOCALE_LABELS em index.js).
+  'ui.lang.aria': 'Idioma',
+  'ui.lang.label': 'IDIOMA:',
+  'ui.lang.restart_note': 'Trocar o idioma reinicia a locadora.',
+
+  // Painel do videocassete
+  'ui.deck.aria': 'Videocassete',
+  'ui.deck.rew': 'REBOBINA',
+  'ui.deck.rew_aria': 'Rebobinar',
+  'ui.deck.play': 'PLAY',
+  'ui.deck.play_aria': 'Play',
+  'ui.deck.pause': 'PAUSA',
+  'ui.deck.pause_aria': 'Pausa',
+  'ui.deck.ff': 'AVANÇA',
+  'ui.deck.ff_aria': 'Avançar',
+  'ui.deck.stop': 'STOP',
+  'ui.deck.stop_aria': 'Stop',
+  'ui.deck.eject': 'EJETA',
+  'ui.deck.eject_aria': 'Ejetar',
+  'ui.deck.trk_down_aria': 'Tracking menos',
+  'ui.deck.trk_up_aria': 'Tracking mais',
+
+  // Aviso de controles do HUD (#hint, src/ui/UIManager.js). Padrão [TECLA] AÇÃO, caixa-alta pelo CSS.
+  'ui.hud.hint_keys': '[WASD] ANDAR · [MOUSE] OLHAR · [E] USAR · [F] VERIFICAR · [ESC] SAIR',
+  'ui.hud.hint_touch': '[ANALÓGICO] ANDAR · [ARRASTAR] OLHAR · [TOQUE] USAR',
+
+  // Rótulos dos botões de ação (#mAct). main.js reescreve os rótulos em runtime a partir de main.btn.*;
+  // estas chaves são o rótulo estático equivalente, para o HTML e para leitores de tela.
+  'ui.actions.aria': 'Ações',
+  'ui.actions.use': 'USAR',
+  'ui.actions.inspect': 'VERIFICAR',
+  'ui.actions.exit': 'SAIR',
+  'ui.actions.play_pause': 'PLAY/PAUSA',
+  'ui.actions.rewind': 'REBOBINAR',
+  'ui.actions.shoot': 'ATIRAR',
+  'ui.key.space': 'Espaço',
+
+  // Cartão de ajuda do fliperama (data-i18n-html: stick, lp, lk, hp, hk, note)
+  'ui.arcade.title': 'FLIPERAMA',
+  'ui.arcade.stick': 'alavanca<br>(setas)',
+  'ui.arcade.lp': 'soco<br>fraco',
+  'ui.arcade.lk': 'chute<br>fraco',
+  'ui.arcade.hp': 'soco<br>forte',
+  'ui.arcade.hk': 'chute<br>forte',
+  'ui.arcade.coin': 'colocar ficha',
+  'ui.arcade.start': 'jogador 1',
+  'ui.arcade.exit': 'levantar (o jogo continua rodando)',
+  'ui.arcade.note': '<b>Sem som?</b> Clique no ícone de <b>alto-falante</b>, ao lado direito do jogo (ele começa mudo).',
+
+  // Cartão de ajuda do programa secreto (data-i18n-html: run, keys, other, exit, note). "Run" e "Choose Controls" são do jogo.
+  'ui.gta.title': 'PROGRAMA SECRETO',
+  'ui.gta.run': '<span class="kc">Clique</span> na tela e depois em <b>Run</b> (↑ ↓ e <span class="kc">Enter</span>)',
+  'ui.gta.move': 'andar e dirigir',
+  'ui.gta.keys': '<span class="kc">Ctrl</span> atirar · <span class="kc">Enter</span> entrar/sair do carro',
+  'ui.gta.other': 'Outras teclas: menu <b>Choose Controls</b> do jogo',
+  'ui.gta.exit': 'botão <b>LEVANTAR</b> (canto superior direito); o jogo é encerrado',
+  'ui.gta.note': 'Nenhuma tecla levanta: o <b>ESC</b> e as demais são do jogo.',
+
+  // Terminal do caixa (RENTAL-OS)
+  'ui.term.aria': 'Terminal do caixa',
+  'ui.term.titlebar': '● RENTAL-OS v1.996 · TERMINAL DO CAIXA · [PORTA COM1: 9600 BAUD ONLINE]',
+  'ui.term.close_aria': 'Fechar terminal',
+  'ui.term.tabs_aria': 'Abas do terminal',
+  'ui.term.connected': '● TERMINAL CONECTADO [COM1: 9600 BAUD]',
+  'ui.term.current_channel': 'CANAL ATUAL:',
+  'ui.term.collection': 'ACERVO:',
+  'ui.term.tapes': 'fitas',
+  'ui.term.load_title': 'CARREGAR NOVO CANAL / PLAYLIST:',
+  'ui.term.feed_aria': 'Canal ou playlist',
+  'ui.term.feed_placeholder': 'ID de canal (UC...), @handle ou Playlist...',
+  'ui.term.inventory': 'INVENTÁRIO DAS FITAS NA PRATELEIRA:',
+  'ui.term.prompt': 'C:\\LOCADORA>',
+  'ui.term.cli_aria': 'Linha de comando',
+  'ui.term.cli_placeholder': 'digite aqui...',
+  'ui.term.footer': '[ESC] FECHAR TERMINAL · CLIQUE NAS ABAS PARA TROCAR DE TELA',
+
+  // Créditos estáticos (modelos 3D). Autores, títulos dos modelos (entre parênteses), licenças e URLs não traduzem.
+  'ui.credits.manifest': '★ MANIFESTO DE HARDWARE & MODELOS 3D (LOW-POLY)',
+  'ui.credits.intro': 'Todos os modelos 3D utilizados neste ambiente foram integrados sob suas respectivas licenças Creative Commons (CC-BY 3.0 / CC-BY 4.0):',
+  'ui.credits.author': 'Autor:',
+  'ui.credits.use': 'Uso:',
+  'ui.credits.source': 'Fonte:',
+  'ui.credits.procedural_source': 'Modelagem procedural nativa Three.js',
+  'ui.credits.computer': 'COMPUTADOR DO CAIXA',
+  'ui.credits.computer_use': 'Terminal interativo do balcão',
+  'ui.credits.tv': 'TELEVISÃO RETRÔ CRT',
+  'ui.credits.tv_use': 'TV retrô clássica sobre o balcão',
+  'ui.credits.vcr': 'VIDEOCASSETE VCR (Deck Topo da TV)',
+  'ui.credits.vcr_use': 'Deck VCR low-poly',
+  'ui.credits.tape': 'CASSETE FITA VHS',
+  'ui.credits.tape_use': 'Fitas nas prateleiras',
+  'ui.credits.vending': 'MÁQUINA DE REFRIGERANTE',
+  'ui.credits.vending_use': 'Vending machine clássica iluminada',
+  'ui.credits.can': 'LATA DE REFRIGERANTE',
+  'ui.credits.can_use': 'Lata consumível',
+  'ui.credits.fan': 'VENTILADOR DE MESA OSCILANTE',
+  'ui.credits.fan_use': 'Ventilador animado',
+  'ui.credits.car': 'JEEP (Exterior)',
+  'ui.credits.car_use': 'Jeep estacionado no exterior',
+  'ui.credits.arcade': 'FLIPERAMA CLÁSSICO',
+  'ui.credits.arcade_use': 'Gabinete de fliperama',
+  'ui.credits.boxes': 'CAIXAS DE PAPELÃO',
+  'ui.credits.boxes_use': 'Caixas da prateleira de baixo',
+  'ui.credits.turkey': 'FRANGO ASSADO',
+  'ui.credits.turkey_use': 'Segredo da lixeira',
+  'ui.credits.pig': 'PORQUINHO',
+  'ui.credits.pig_use': 'Porquinho do estacionamento',
+  'ui.credits.coin': 'MOEDA',
+  'ui.credits.coin_use': 'Moedas da caixa de reciclagem',
+  'ui.credits.padlock': 'CADEADO',
+  'ui.credits.padlock_use': 'Cadeado do armário',
+  'ui.credits.key': 'CHAVE',
+  'ui.credits.key_use': 'Chave do armário',
+
+  // Modal de compartilhar. invite_pre + nome do canal + invite_post formam uma frase.
+  'ui.share.aria': 'Compartilhar link',
+  'ui.share.title': 'CLUBE DA LOCADORA · COMPARTILHAR LINK',
+  'ui.share.qr_aria': 'QR code do link',
+  'ui.share.scan': 'ESCANEIE COM O CELULAR',
+  'ui.share.scan_hint': 'Aponte a câmera para abrir direto na locadora',
+  'ui.share.invite_title': '★ CONVIDE SEUS AMIGOS ★',
+  'ui.share.invite_pre': 'Compartilhe este link para que seus amigos possam explorar a locadora 3D e assistir às fitas do canal',
+  'ui.share.invite_post': '!',
+  'ui.share.link_label': 'LINK DIRETO DA LOCADORA:',
+  'ui.share.copied_msg': '✓ Copiado para a área de transferência!',
+  'ui.share.send': 'ENVIAR DIRETAMENTE:',
+  'ui.share.more': 'Mais Opções',
+
+  // Modal da porta trancada (data-i18n-html: question)
+  'ui.door.aria': 'Porta trancada',
+  'ui.door.titlebar': '🔒 PORTA TRANCADA · SISTEMA DE SEGURANÇA',
+  'ui.door.headline': 'A PORTA ESTÁ TRANCADA COM CHAVE!',
+  'ui.door.body': 'Você forçou a maçaneta 3 vezes. A locadora está trancada por fora para o turno da noite.',
+  'ui.door.question': 'Deseja abrir a trava de emergência e <b>retornar para a Tela Inicial</b> (fachada externa da locadora)?',
+  'ui.door.esc': '[ESC] FECHAR',
+
+  // Contador da campainha (o número e a mensagem vêm de main.js)
+  'ui.bell.title': 'ALERTA DE PRESSÃO NO BALCÃO',
+
+  // Controles de toque
+  'ui.touch.rotate_hint': 'Dica: gire o aparelho para jogar na horizontal.',
+  'ui.touch.fullscreen': 'TELA CHEIA',
+  'ui.touch.fullscreen_exit': 'SAIR DA TELA CHEIA',
+
+  // Zoom do post-it
+  'ui.postit.close': '[E] / [ESC] FECHAR',
+  'ui.postit.close_touch': 'TOQUE PARA FECHAR',
+};
