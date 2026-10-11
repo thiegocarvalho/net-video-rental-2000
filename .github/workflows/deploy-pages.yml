@@ -33,6 +33,12 @@ jobs:
       - name: Validate i18n dictionaries (parity across pt-BR / en-GB / es-ES)
         run: node tools/check-i18n.mjs
 
+      # O Pages serve tudo com max-age=600 e nao da para mudar o cabecalho. Sem isto, cada publicacao
+      # tem 10 minutos servindo arquivo velho. Gera um import map versionado sobre a copia do artefato;
+      # o index.html do repositorio nao muda e o desenvolvimento local segue sem etapa de build.
+      - name: Stamp asset versions for cache busting
+        run: node tools/stamp-cache.mjs
+
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
 
