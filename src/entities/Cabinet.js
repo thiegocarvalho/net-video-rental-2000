@@ -35,6 +35,7 @@ export var TXT = {
   lockedTag: t('ent.cabinet.locked_tag'),
   locked: t('ent.cabinet.locked'),
   actOpen: t('ent.cabinet.act_open'),
+  actClose: t('ent.cabinet.act_close'),
   actUnlock: t('ent.cabinet.act_unlock'),
   keyName: t('ent.cabinet.key_name'),
   keyDesc: t('ent.cabinet.key_desc'),
@@ -512,6 +513,42 @@ function addDoorSolid() {
   env.solids.push(cab.doorSolid);
 }
 
+function removeDoorSolid() {
+  if (!cab.doorSolid) return;
+  var si = env.solids.indexOf(cab.doorSolid);
+  if (si >= 0) env.solids.splice(si, 1);
+  cab.doorSolid = null;
+}
+
+// Fechar e reabrir a porta depois de destrancada. A porta escancarada ocupa ~0.7 m do corredor,
+// entao sem isso ela vira uma parede permanente entre o balcao e o resto da loja.
+// O solido sai no inicio do fechamento e so volta com a porta parada de novo na posicao aberta:
+// assim o jogador nunca fica presa nela no meio da animacao.
+function startDoorSwing(opening) {
+  removeDoorSolid();
+  cab.state = opening ? 'reopening' : 'closing';
+  cab.t = 0;
+  cab.swingFrom = cab.door.rotation.y;
+  cab.swingTo = opening ? -OPEN_ANGLE : 0;
+  cabinetCreakSound(1);
+  if (!opening) setNoteInteractable(false);
+}
+
+function updateDoorSwing(dt) {
+  cab.t += dt;
+  var s = Math.min(1, cab.t / 0.9);
+  s = 1 - Math.pow(1 - s, 3);
+  cab.door.rotation.y = cab.swingFrom + (cab.swingTo - cab.swingFrom) * s;
+  if (s < 1) return;
+  if (cab.state === 'reopening') {
+    cab.state = 'open';
+    addDoorSolid();
+    setNoteInteractable(true);
+  } else {
+    cab.state = 'shut';
+  }
+}
+
 function celebrate() {
   cab.celebrated = true;
   cab.grp.updateMatrixWorld(true);
@@ -645,8 +682,13 @@ export var HELD_KEY_TARGETS = { cabinet: 1, coin: 1, pig: 1, pig_car: 1, rusbe_p
 
 export function cabinetLabel(o) {
   var t = o.userData.type;
-  if (t === 'cabinet') return { desc: '<b>' + TXT.cabinetName + '</b><br><span class="warn">' + TXT.lockedTag + '</span>',
-                                act: S.heldKey && S.heldKey.kind === 'key' ? TXT.actUnlock : TXT.actOpen };
+  if (t === 'cabinet') {
+    if (cab.state === 'open') return { desc: '<b>' + TXT.cabinetName + '</b>', act: TXT.actClose };
+    if (cab.state === 'shut') return { desc: '<b>' + TXT.cabinetName + '</b>', act: TXT.actOpen };
+    if (cab.state !== 'locked') return { desc: '<b>' + TXT.cabinetName + '</b>', act: '' };
+    return { desc: '<b>' + TXT.cabinetName + '</b><br><span class="warn">' + TXT.lockedTag + '</span>',
+             act: S.heldKey && S.heldKey.kind === 'key' ? TXT.actUnlock : TXT.actOpen };
+  }
   if (t === 'cabinet_key') return { desc: '<b>' + TXT.keyName + '</b>', act: TXT.actTake };
   if (t === 'cabinet_note') return { desc: '<b>' + TXT.noteName + '</b>', act: TXT.actTake };
   return null;
@@ -656,7 +698,9 @@ export function cabinetLabel(o) {
 export function useCabinet(o) {
   var t = o.userData.type;
   if (t === 'cabinet') {
-    if (cab.state !== 'locked') return true;
+    if (cab.state === 'open') { startDoorSwing(false); return true; }     // fecha, liberando o corredor
+    if (cab.state === 'shut') { startDoorSwing(true); return true; }      // reabre (ja destrancado)
+    if (cab.state !== 'locked') return true;                              // durante as animacoes, ignora
     if (S.heldKey && S.heldKey.kind === 'key') startUnlock();
     else { toast(TXT.locked); padlockRattleSound(1); lock.jiggle = 0.35; }
     return true;
@@ -706,6 +750,7 @@ export function updateCabinet(dt, insE, bob) {
   }
   updateGlint(dt);
   if (cab.state === 'opening') updateOpening(dt);
+  else if (cab.state === 'closing' || cab.state === 'reopening') updateDoorSwing(dt);
   if (lock.grp) updateLock(dt);
   updateConfetti(dt);
 }
@@ -720,7 +765,7 @@ onWorldReset(function() {
   if (!env || !cab.grp) return;
   cab.state = 'locked'; cab.t = 0; cab.celebrated = false; cab.creaked = false;
   cab.door.rotation.y = 0;
-  if (cab.doorSolid) { var si = env.solids.indexOf(cab.doorSolid); if (si >= 0) env.solids.splice(si, 1); cab.doorSolid = null; }
+  removeDoorSolid();
   if (env.interactables.indexOf(cab.hit) < 0) env.interactables.push(cab.hit);
   var qi = env.interactables.indexOf(cab.note); if (qi >= 0) env.interactables.splice(qi, 1);
   if (lock.grp) {

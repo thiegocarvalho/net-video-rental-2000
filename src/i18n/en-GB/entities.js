@@ -66,6 +66,7 @@ export default {
   'ent.cabinet.locked_tag': 'Padlocked',
   'ent.cabinet.locked': 'Padlocked.',
   'ent.cabinet.act_open': 'OPEN',
+  'ent.cabinet.act_close': 'CLOSE',
   'ent.cabinet.act_unlock': 'UNLOCK',
   'ent.cabinet.key_name': 'Key',
   'ent.cabinet.key_desc': 'Small, golden and a little smeared with grease.',

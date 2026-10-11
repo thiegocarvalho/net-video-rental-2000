@@ -65,6 +65,7 @@ export default {
   'ent.cabinet.locked_tag': 'Trancado com cadeado',
   'ent.cabinet.locked': 'Trancado com cadeado.',
   'ent.cabinet.act_open': 'ABRIR',
+  'ent.cabinet.act_close': 'FECHAR',
   'ent.cabinet.act_unlock': 'DESTRANCAR',
   'ent.cabinet.key_name': 'Chave',
   'ent.cabinet.key_desc': 'Pequena, dourada e um pouco suja de graxa.',

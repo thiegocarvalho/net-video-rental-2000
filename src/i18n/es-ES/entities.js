@@ -66,6 +66,7 @@ export default {
   'ent.cabinet.locked_tag': 'Cerrado con candado',
   'ent.cabinet.locked': 'Cerrado con candado.',
   'ent.cabinet.act_open': 'ABRIR',
+  'ent.cabinet.act_close': 'FECHAR',
   'ent.cabinet.act_unlock': 'DESBLOQUEAR',
   'ent.cabinet.key_name': 'Llave',
   'ent.cabinet.key_desc': 'Pequeña, dorada y un poco manchada de grasa.',
