@@ -56,7 +56,11 @@ var DROP_POS = new THREE.Vector3(0.1, 3.5, 2.1);   // meio da loja, perto do tet
 var MAX_DECALS = 32;
 var DECAL_LIFE = 20;                   // segundos ate a marca de tiro piscar 3x e sumir (core/Blink.js)
 var DECAL_SIZE = 0.26;                 // marca de tiro (m)
-var LAMP_RADIUS = 0.38;               // tolerancia do raio ate o centro da lampada (espalhamento do chumbo)
+var LAMP_RADIUS = 0.38;               // tolerancia minima ate o centro da lampada (espalhamento do chumbo)
+// A tolerancia cresce com a distancia, senao ela encolhe em ANGULO e os 6 postes do fundo do lote
+// (20-30 m) viram alvo de ~10 px, lendo como "o jogo nao registrou o tiro" em vez de "errei".
+// tan(2.7 graus): da a mesma mira que os 2 postes da calcada sempre tiveram, a ~8 m.
+var LAMP_SPREAD = 0.047;
 var OUTSIDE_Z = 6.3;                  // so se acerta as lampadas do lado de fora (a vitrine segura o tiro)
 
 var env = null;   // { scene, camera, interactables, bin, binGrp, streetLamps, car, recoil(rad) }
@@ -525,7 +529,8 @@ function lampOnRay(origin, dir, maxT) {
     tmpV.copy(L.bulb.position).sub(origin);
     var t = tmpV.dot(dir);
     if (t <= 0 || t > maxT + 0.5 || t > bestT) continue;
-    if (tmpV.lengthSq() - t * t < LAMP_RADIUS * LAMP_RADIUS) { best = L; bestT = t; }
+    var r = Math.max(LAMP_RADIUS, t * LAMP_SPREAD);
+    if (tmpV.lengthSq() - t * t < r * r) { best = L; bestT = t; }
   }
   return best;
 }
