@@ -2206,6 +2206,39 @@ var camFwd = new THREE.Vector3(), toTv = new THREE.Vector3(), toCam = new THREE.
 var fanHumAcc = 0;
 var lastYtOpacity = '', lastMuteDisp = '', lastArcOpacity = '', lastTermOpacity = '', lastGtaOpacity = '', lastCompHole = false, arcContainer = null, arcadeBootT = 0;
 var lastGunCross = null;
+
+// Diagnostico de alinhamento da TV (so com ?debug). Compara, em coordenadas de tela, ONDE ESTA O BURACO
+// da tela da TV (#crt, posicionado por syncCRT a partir dos cantos projetados da malha 3D) com ONDE ESTA
+// o contentor do video (#yt-container, posicionado pelo CSS3DRenderer) e com o IFRAME dentro dele.
+// Se cont bate com crt e ifr nao, o problema e o iframe; se cont nao bate com crt, e a camada CSS3D.
+var tvDiagEl = null, tvDiagT = 0;
+function tvDiag() {
+  tvDiagT++; if (tvDiagT % 30) return;                       // ~2 Hz, sem custo por quadro
+  if (!tvDiagEl) {
+    tvDiagEl = document.createElement('div');
+    tvDiagEl.style.cssText = 'position:fixed;left:4px;top:4px;z-index:9999;background:rgba(0,0,0,.88);color:#6f6;'
+      + 'font:11px/1.35 ui-monospace,monospace;padding:6px 8px;white-space:pre;pointer-events:none;max-width:96vw';
+    document.body.appendChild(tvDiagEl);
+  }
+  var r = function (el) {
+    if (!el) return 'ausente';
+    var b = el.getBoundingClientRect();
+    return Math.round(b.left) + ',' + Math.round(b.top) + ' ' + Math.round(b.width) + 'x' + Math.round(b.height);
+  };
+  var vv = window.visualViewport;
+  var cont = document.getElementById('yt-container');
+  var ifr = cont && cont.querySelector('iframe');
+  tvDiagEl.textContent =
+      'win   ' + window.innerWidth + 'x' + window.innerHeight + '  dpr ' + (window.devicePixelRatio || 1) + '\n'
+    + 'vv    ' + (vv ? Math.round(vv.width) + 'x' + Math.round(vv.height) + ' off ' + Math.round(vv.offsetTop) + ' sc ' + vv.scale.toFixed(2) : 'n/a') + '\n'
+    + 'canv  ' + r(renderer && renderer.domElement) + '\n'
+    + 'cssd  ' + r(cssRenderer && cssRenderer.domElement) + '\n'
+    + 'crt   ' + r(EL.crt) + '   <- buraco da TV\n'
+    + 'cont  ' + r(cont) + '   <- div do video\n'
+    + 'ifr   ' + r(ifr) + '   <- iframe\n'
+    + 'ifrAt ' + (ifr ? (ifr.getAttribute('width') + 'x' + ifr.getAttribute('height') + ' off ' + ifr.offsetWidth + 'x' + ifr.offsetHeight) : 'ausente') + '\n'
+    + 'fov   ' + camera.fov.toFixed(1) + '  watching ' + (S.watching ? 1 : 0);
+}
 // These live inside the CSS3D layer and only enter the DOM after the first cssRenderer.render(), so look them up lazily.
 var ytEl = null, muteInd = null;
 var hudBtns = ['mb1','mb2','mb3','mb4','mb5','mb7'].map(function(id){
@@ -2446,6 +2479,7 @@ function tick(){
   if(DEBUG){
     fpsAcc+=dt;fpsN++;
     if(fpsAcc>=.5){setTxt(EL.fps,'fps',Math.round(fpsN/fpsAcc)+' FPS');fpsAcc=0;fpsN=0;}
+    tvDiag();
   }
   if(updateClock) updateClock();
   updateSharePosterDrop(dt);   // queda/pisca do cartaz de indicacao depois de compartilhar
